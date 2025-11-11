@@ -1,0 +1,67 @@
+---
+title: "Contingency Tables Methods"
+author: "Anthony Morciglio"
+date: "10/17/2025"
+output: html_document
+---
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r setup, warning = FALSE, message = FALSE, echo = TRUE}
+
+library(MCMCpack)
+library(ggplot2)
+
+# Section
+# Parameters
+alpha <- c(3, 4, 2, 5, 3)
+p_like <- 0.6
+N <- 1000
+
+# Step 1: Generate proportions
+p <- as.numeric(rdirichlet(1, alpha))
+
+# Step 2: Sample counts per ethnicity
+n_row <- as.numeric(rmultinom(1, N, prob = p))
+
+# Step 3: Generate likes/dislikes
+likes <- rbinom(length(n_row), size = n_row, prob = p_like)
+dislikes <- n_row - likes
+
+ct_dirichlet <- data.frame(
+  Ethnicity = c("White", "Black", "Hispanic", "Asian", "Other"),
+  Like = likes,
+  Dislike = dislikes
+)
+
+print(ct_dirichlet)
+
+
+# Section 
+set.seed(123)
+N <- 1000
+ethnicities <- c("White", "Black", "Hispanic", "Asian", "Other")
+pi <- c(0.3, 0.25, 0.2, 0.15, 0.1)
+p_like <- 0.6
+
+E <- sample(ethnicities, size = N, replace = TRUE, prob = pi)
+P <- rbinom(N, 1, p_like)
+Preference <- ifelse(P == 1, "Like", "Dislike")
+
+ct_categorical <- as.data.frame.matrix(table(E, Preference))
+print(ct_categorical)
+
+library(reshape2)
+library(ggplot2)
+
+ct_melt <- melt(ct_dirichlet, id.vars = "Ethnicity")
+ggplot(ct_melt, aes(x = Ethnicity, y = value, fill = variable)) +
+  geom_bar(stat = "identity", position = "fill") +
+  scale_fill_manual(values = c("blue", "red")) +
+  labs(y = "Proportion", title = "Proportion of Likes and Dislikes by Ethnicity") +
+  theme_minimal()
+
+```
+

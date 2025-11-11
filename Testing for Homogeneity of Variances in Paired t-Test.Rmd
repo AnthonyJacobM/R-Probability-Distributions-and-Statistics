@@ -1,0 +1,75 @@
+---
+title: "Testing for Homogeneity of Variances in the Paired t-Test"
+author: "Anthony Morciglio"
+date: "11/07/2025"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    mathjax: default
+---
+
+## Introduction
+
+This R Markdown document demonstrates the **Paired t-Test** and explores the concept of **homogeneity of variances** in the context of dependent samples.  
+Unlike the independent t-test, where we assume equal variances between two groups, the paired t-test focuses on the **differences** between paired observations (e.g., before and after a treatment).  
+
+The steps below:
+1. Generate two paired datasets representing “Before” and “After” measurements (weights before and after a diet).  
+2. Compute the **difference scores** (`After - Before`).
+3. Visualize the distribution of differences to assess consistency in variance (homogeneity).  
+4. Conduct a **paired t-test** to determine if the mean difference is statistically significant.  
+5. Check the **normality assumption** on the differences using the **Shapiro–Wilk test**.  
+
+---
+
+```{r paired-t-homogeneity, echo=TRUE, message=FALSE, warning=FALSE}
+# ================================================
+# Paired t-Test and Homogeneity of Variance Example
+# ================================================
+
+# Step 1: Define Before and After measurements
+before <- c(72, 68, 75, 70, 80, 85, 77, 90, 65, 73)
+after  <- c(70, 67, 72, 69, 78, 82, 74, 88, 63, 72)
+
+# Step 2: Compute difference scores
+diff <- after - before
+
+# Step 3: Visualize the distribution of differences
+par(mfrow = c(1, 2))  # Show two plots side-by-side
+boxplot(diff,
+        main = "Distribution of Weight Differences",
+        ylab = "Difference (After - Before)",
+        col = "blue", border = "gray30")
+
+hist(diff,
+     main = "Histogram of Weight Differences",
+     xlab = "Difference (kg)",
+     col = "red", border = "white")
+
+par(mfrow = c(1, 1))  # Reset layout
+
+# Step 4: Conduct the paired t-test
+t_test_result <- t.test(after, before, paired = TRUE)
+t_test_result
+
+# Step 5: Normality check on the difference scores
+shapiro_result <- shapiro.test(diff)
+shapiro_result
+
+# Step 6: Display results summary
+cat("Paired t-test p-value:", round(t_test_result$p.value, 4), "\n")
+cat("Shapiro-Wilk p-value:", round(shapiro_result$p.value, 4), "\n")
+
+if (t_test_result$p.value < 0.05) {
+  cat("Conclusion: Significant difference detected (Reject H0)\n")
+} else {
+  cat("Conclusion: No significant difference (Fail to Reject H0)\n")
+}
+
+if (shapiro_result$p.value > 0.05) {
+  cat("Normality assumption appears reasonable.\n")
+} else {
+  cat("Differences deviate from normality (consider nonparametric test).\n")
+}
+```

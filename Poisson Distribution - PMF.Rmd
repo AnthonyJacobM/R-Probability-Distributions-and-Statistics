@@ -1,0 +1,40 @@
+---
+title: "Poisson Distribution: Probability Mass Function"
+author: "Anthony Morciglio"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+## The Poisson Distribution as an Asymptotic Derivation of the Binomial Distribution
+
+This R code generates a probability mass function (PMF) plot of the Poisson distribution with parameter $\lambda=2$, illustrating the probability of different counts of rare events such as genetic mutations in cancer cells. Using the dpois() function, it calculates probabilities for values of $Y$ ranging from 0 to 10 and organizes them into a data frame for plotting with ggplot2. The bars represent the probability of observing each count, while numeric labels above the bars provide exact probability values rounded to three decimals. A special highlight is added to the case $Y = 3$, both in color and annotation, emphasizing the probability of observing exactly three mutations in this setting. This visualization provides a clear and intuitive understanding of how the Poisson distribution models discrete event counts and makes the interpretation of specific outcomes, like $P(Y = 3)$, more tangible.
+
+
+```{r setup, warning = FALSE, message = FALSE}
+# Load libraries
+library(ggplot2)
+
+# Parameters
+lambda <- 2
+x <- 0:10   # range of possible mutation counts
+
+# Poisson PMF
+pmf <- dpois(x, lambda)
+
+# Data frame
+df <- data.frame(x, pmf)
+
+# Plot
+ggplot(df, aes(x = x, y = pmf)) +
+  geom_col(fill = "skyblue", color = "black", width = 0.7) +
+  geom_point(size = 3, color = "red") +
+  geom_text(aes(label = round(pmf, 3)), vjust = -0.5, size = 4) +
+  geom_col(data = subset(df, x == 3), aes(x, pmf), fill = "orange", width = 0.7) +
+  labs(
+    title = "Poisson PMF (λ = 2)",
+    subtitle = "Probability of exactly 3 mutations is highlighted",
+    x = "Number of mutations",
+    y = "Probability"
+  ) +
+  theme_minimal(base_size = 14)
+```

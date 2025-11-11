@@ -1,0 +1,120 @@
+---
+title: "Uniform Distribution - Entropy"
+author: "Anthony Morciglio"
+date: "2025-09-03"
+output: html_document
+---
+
+## Understanding the Entropy of the Discrete Uniform Distribution
+In this R script, we visualize the entropy of the discrete uniform distribution.  
+The entropy of a probability distribution is used to estimate the unexpectedness 
+of a probability distribution based on its parameters.  For the discrete uniform 
+distribution, the entropy takes a logarithm form based on the number of outcomes (N).  
+Hence, the rate of increase of the entropy will be greater in low values of 
+N.  Additionally, the script provides visualizations of the probabililty mass 
+function along with the entropy.  
+
+```{r setup, warning = FALSE, message = FALSE}
+# ==============================================================================
+# R Code to Visualize the Entropy of the Discrete Uniform Distribution
+# ==============================================================================
+
+# This script performs entropy calculations and generates plots to demonstrate
+# the relationship between the number of outcomes and the entropy of a
+# discrete uniform distribution.
+
+# Install and load the 'ggplot2' package if not already installed
+if (!requireNamespace("ggplot2", quietly = TRUE)) {
+  install.packages("ggplot2")
+}
+library(ggplot2)
+
+# ------------------------------------------------------------------------------
+# Part 1: Entropy Calculation for a Simple Example
+# ------------------------------------------------------------------------------
+
+# Let's calculate the entropy for a fair six-sided die.
+# The number of possible outcomes, N, is 6.
+N <- 6
+
+# The entropy of a discrete uniform distribution is H(X) = log2(N).
+entropy_value <- log2(N)
+
+cat("--- Entropy Calculation for a Fair Six-Sided Die ---\n")
+cat(paste("Number of outcomes (N):", N, "\n"))
+cat(paste("Entropy H(Y) = log2(N) =", round(entropy_value, 4), "bits\n\n"))
+
+
+# ------------------------------------------------------------------------------
+# Part 2: Visualization of Entropy vs. Number of Outcomes
+# ------------------------------------------------------------------------------
+
+cat("--- Plotting Entropy vs. N ---\n")
+
+# Create a sequence of N values (number of outcomes)
+N_values <- seq(2, 20, by = 1)
+
+# Calculate the entropy for each N
+entropy_data <- data.frame(
+  N = N_values,
+  entropy = log2(N_values)
+)
+
+# Create the plot showing the relationship between N and Entropy
+entropy_plot <- ggplot(entropy_data, aes(x = N, y = entropy)) +
+  geom_line(color = "#3B82F6", size = 1.5) +
+  geom_point(color = "#1D4ED8", size = 3) +
+  labs(
+    title = "Entropy vs. Number of Outcomes (N)",
+    subtitle = "Entropy increases logarithmically with the number of outcomes.",
+    x = "Number of Outcomes (N)",
+    y = expression(paste("Entropy ", H(Y), " (bits)"))
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5))
+
+print(entropy_plot)
+
+
+# ------------------------------------------------------------------------------
+# Part 3: Visualization of PMF and Entropy
+# ------------------------------------------------------------------------------
+
+cat("\n--- Plotting PMF for different N values ---\n")
+
+# Create data for different N values
+df_pmf <- data.frame(
+  N = c(rep(4, 4), rep(6, 6), rep(10, 10)),
+  outcome = c(1:4, 1:6, 1:10),
+  probability = c(rep(1/4, 4), rep(1/6, 6), rep(1/10, 10))
+)
+
+# Calculate entropy for annotation
+entropy_N4 <- round(log2(4), 2)
+entropy_N6 <- round(log2(6), 2)
+entropy_N10 <- round(log2(10), 2)
+
+# Create the plot showing the PMF for different N values
+pmf_plot <- ggplot(df_pmf, aes(x = as.factor(outcome), y = probability)) +
+  geom_bar(stat = "identity", fill = "#3B82F6", color = "#1D4ED8", width = 0.7) +
+  facet_wrap(~ N, scales = "free_x", labeller = as_labeller(function(N) paste0("N=", N))) +
+  labs(
+    title = "Probability Mass Function (PMF) and Entropy",
+    subtitle = "As N increases, the PMF decreases, leading to higher entropy.",
+    x = "Outcome",
+    y = "Probability"
+  ) +
+  geom_text(data = data.frame(N = c(4, 6, 10),
+                              label = c(paste("H(Y) = ", entropy_N4, "bits"), 
+                                        paste("H(Y) = ", entropy_N6, "bits"), 
+                                        paste("H(Y) = ", entropy_N10, "bits"))),
+            aes(x = Inf, y = Inf, label = label),
+            hjust = 1, vjust = 1.1, size = 4) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5),
+        strip.text = element_text(size = 12))
+
+print(pmf_plot)
+```

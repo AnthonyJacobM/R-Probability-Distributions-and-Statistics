@@ -1,0 +1,49 @@
+---
+title: "Continuous and Differentiable Functions in R"
+author: "Anthony Morciglio"
+date: "11/09/2025"
+output: html_document
+---
+
+## Introduction
+
+This R Markdown file demonstrates the visualization of continuous and differentiable functions.  
+We plot two main examples:
+1. The **absolute value function**, which is continuous everywhere but not differentiable at \( x = 0 \).  
+2. A **smooth polynomial function**, \( f(x) = x^3 - 3x + 1 \), which is both continuous and differentiable everywhere.
+
+The plots help illustrate how differentiability implies continuity, but continuity alone does not guarantee differentiability.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Load necessary package
+library(ggplot2)
+
+# Create a sequence of x values
+x <- seq(-3, 3, length.out = 400)
+
+# Define the functions
+f_continuous <- abs(x)                  # Continuous but not differentiable
+f_differentiable <- x^2                 # Continuous and differentiable
+
+# Combine into a data frame
+df <- data.frame(
+  x = x,
+  Continuous = f_continuous,
+  Differentiable = f_differentiable
+)
+
+# Melt data for ggplot
+library(reshape2)
+df_long <- melt(df, id.vars = "x", variable.name = "Function", value.name = "y")
+
+# Plot both functions
+ggplot(df_long, aes(x = x, y = y, color = Function)) +
+  geom_line(size = 1.2) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "black") +
+  annotate("text", x = 0.2, y = 2.5, label = "Non-differentiable point", hjust = 0, size = 4) +
+  labs(title = "Continuous vs Differentiable Functions",
+       x = "x",
+       y = "f(x)",
+       caption = "The absolute value function is continuous but not differentiable at x = 0.") +
+  theme_minimal(base_size = 14)
+```

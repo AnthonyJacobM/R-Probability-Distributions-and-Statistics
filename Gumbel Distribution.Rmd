@@ -1,0 +1,61 @@
+---
+title: "Gumbel Distribution"
+author: "Anthony Morciglio"
+date: "10/30/2025"
+output: html_document
+---
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Load necessary libraries
+if(!require(extraDistr)) install.packages("extraDistr", repos="http://cran.us.r-project.org")
+if(!require(ggplot2)) install.packages("ggplot2", repos="http://cran.us.r-project.org")
+
+library(extraDistr)
+library(ggplot2)
+
+# Parameters for the Gumbel Distribution
+mu <- 0      # location
+beta <- 1    # scale
+
+# Create a sequence of x values
+x <- seq(-5, 10, length.out = 300)
+
+# Compute PDF and CDF
+pdf_vals <- dgumbel(x, mu, beta)
+cdf_vals <- pgumbel(x, mu, beta)
+
+# Compute expected value (mean) and median
+expected_value <- mu + beta * 0.5772  # Euler-Mascheroni constant ≈ 0.5772
+median_value <- mu - beta * log(log(2))
+
+# Combine into a data frame for ggplot
+df <- data.frame(x, pdf_vals, cdf_vals)
+
+# Plot PDF
+pdf_plot <- ggplot(df, aes(x, pdf_vals)) +
+  geom_line(color = "blue", size = 1.2) +
+  geom_vline(xintercept = expected_value, color = "red", linetype = "dashed", linewidth = 1) +
+  geom_vline(xintercept = median_value, color = "darkgreen", linetype = "dotted", linewidth = 1) +
+  labs(title = "Gumbel Distribution - PDF",
+       subtitle = paste("Location =", mu, ", Scale =", beta),
+       x = "x", y = "Density") +
+  annotate("text", x = expected_value + 0.3, y = max(pdf_vals)*0.8, label = "Mean", color = "red", hjust = 0) +
+  annotate("text", x = median_value + 0.3, y = max(pdf_vals)*0.7, label = "Median", color = "darkgreen", hjust = 0) +
+  theme_minimal()
+
+# Plot CDF
+cdf_plot <- ggplot(df, aes(x, cdf_vals)) +
+  geom_line(color = "blue", size = 1.2) +
+  geom_vline(xintercept = expected_value, color = "red", linetype = "dashed", linewidth = 1) +
+  geom_vline(xintercept = median_value, color = "darkgreen", linetype = "dotted", linewidth = 1) +
+  labs(title = "Gumbel Distribution - CDF",
+       subtitle = paste("Location =", mu, ", Scale =", beta),
+       x = "x", y = "Cumulative Probability") +
+  annotate("text", x = expected_value + 0.3, y = 0.6, label = "Mean", color = "red", hjust = 0) +
+  annotate("text", x = median_value + 0.3, y = 0.5, label = "Median", color = "darkgreen", hjust = 0) +
+  theme_minimal()
+
+# Display both plots
+print(pdf_plot)
+print(cdf_plot)
+```

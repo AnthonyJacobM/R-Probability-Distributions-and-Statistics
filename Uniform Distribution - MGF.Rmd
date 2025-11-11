@@ -1,0 +1,169 @@
+---
+title: "Uniform Distribution - MGF"
+author: "Anthony Morciglio"
+date: "2025-09-01"
+output: html_document
+---
+
+## Deriving the Moment Generating Function of the Discrete Uniform Distribution
+This R script is a hands-on guide to the Moment Generating Function (MGF) of the Discrete Uniform Distribution. It defines a custom function, uniform_mgf, to calculate the MGF for any discrete uniform random variable. The code then uses this function to demonstrate a powerful application: approximating the distribution's mean and variance by taking numerical derivatives of the MGF evaluated at t=0.
+
+The script also provides two informative plots to visualize these concepts. The first plot displays the MGF for different distributions (e.g., a 6-sided die, a 10-sided die, etc.), showing how the function's curve changes with the number of possible outcomes. The second plot illustrates the fundamental relationship between the number of outcomes and the key moments of the distribution, clearly showing that the mean grows linearly, while the variance increases quadratically. This visualization effectively reinforces the theoretical properties of the discrete uniform distribution discussed in the blog post.
+
+```{r setup, warning = FALSE, message = FALSE}
+# ==============================================================================
+# R Code for the Moment Generating Function of the Discrete Uniform Distribution
+# ==============================================================================
+
+# This script demonstrates the Moment Generating Function (MGF) for a 
+# discrete uniform distribution. It provides a function to calculate the MGF
+# and then uses it to verify the theoretical mean and variance for a
+# fair six-sided die.
+
+# ------------------------------------------------------------------------------
+# Part 1: Define the MGF Function
+# ------------------------------------------------------------------------------
+
+#' @title Discrete Uniform Moment Generating Function
+#' @description Calculates the MGF for a discrete uniform random variable Y with
+#' outcomes from a to b.
+#' @param t The variable of the MGF.
+#' @param a The minimum possible outcome.
+#' @param b The maximum possible outcome.
+#' @return The value of the MGF at time t.
+uniform_mgf <- function(t, a, b) {
+  # Use ifelse() for vectorized operation to handle the t=0 case correctly
+  ifelse(t == 0, 1, (exp(t * a) - exp(t * (b + 1))) / ((b - a + 1) * (1 - exp(t))))
+}
+
+# ------------------------------------------------------------------------------
+# Part 2: Demonstrate Derivation of Mean and Variance
+# ------------------------------------------------------------------------------
+
+# The mean of the distribution is the first derivative of the MGF evaluated at t=0.
+# The variance is the second moment minus the square of the mean.
+# We will approximate the derivatives using a small value for h.
+
+# Set the parameters for a fair six-sided die
+a <- 1
+b <- 6
+N <- b - a + 1
+
+# Set a small value for approximation (approaching zero)
+h <- 1e-6
+
+# 1. Calculate the theoretical mean and variance
+theoretical_mean <- (a + b) / 2
+theoretical_variance <- ((N^2) - 1) / 12
+
+cat("Parameters of the Discrete Uniform Distribution:\n")
+cat(paste("Outcomes:", a, "to", b, "\n"))
+cat(paste("Total number of outcomes (N):", N, "\n\n"))
+cat("Theoretical Mean:", theoretical_mean, "\n")
+cat("Theoretical Variance:", theoretical_variance, "\n\n")
+
+# 2. Approximate the first derivative to find the mean
+# Formula for first derivative: f'(t) ≈ (f(t+h) - f(t))/h
+mgf_at_h <- uniform_mgf(h, a, b)
+mgf_at_0 <- 1 # M_Y(0) is always 1
+approximated_mean <- (mgf_at_h - mgf_at_0) / h
+
+cat("Approximated Mean (1st Derivative at t=0):", approximated_mean, "\n")
+
+# 3. Approximate the second derivative to find the second moment
+# Formula for second derivative: f''(t) ≈ (f(t+h) - 2f(t) + f(t-h))/h^2
+mgf_at_minus_h <- uniform_mgf(-h, a, b)
+approximated_second_moment <- (mgf_at_h - 2 * mgf_at_0 + mgf_at_minus_h) / h^2
+
+cat("Approximated Second Moment (2nd Derivative at t=0):", approximated_second_moment, "\n")
+
+# 4. Calculate the approximated variance from the moments
+approximated_variance <- approximated_second_moment - (approximated_mean)^2
+
+cat("Approximated Variance:", approximated_variance, "\n\n")
+
+# Compare with theoretical values
+cat("Comparison:\n")
+cat("Mean is close:", isTRUE(all.equal(approximated_mean, theoretical_mean)), "\n")
+cat("Variance is close:", isTRUE(all.equal(approximated_variance, theoretical_variance)), "\n")
+
+
+# ------------------------------------------------------------------------------
+# Part 3: Visualization of the MGF and Moments
+# ------------------------------------------------------------------------------
+
+# Install and load the 'ggplot2' package if not already installed
+if (!requireNamespace("ggplot2", quietly = TRUE)) {
+  install.packages("ggplot2")
+}
+library(ggplot2)
+
+# --- Plot 1: The Moment Generating Function ---
+cat("\n--- Plotting the Moment Generating Function ---\n")
+
+t_values <- seq(0, 1, length.out = 100)
+# Define different uniform distributions
+df_mgf_plot <- data.frame(
+  t = rep(t_values, 3),
+  mgf = c(
+    uniform_mgf(t_values, 1, 6),   # 6-sided die
+    uniform_mgf(t_values, 1, 8),  # 8-sided die
+    uniform_mgf(t_values, 1, 10)   # 10-sided die
+  ),
+  label = factor(c(
+    rep("N = 6", length(t_values)),
+    rep("N = 8", length(t_values)),
+    rep("N = 10", length(t_values))
+  ), levels = c("N = 6", "N = 8", "N = 10"))
+)
+
+mgf_plot <- ggplot(df_mgf_plot, aes(x = t, y = mgf, color = label)) +
+  geom_line(size = 1.2) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray50") +
+  labs(
+    title = "Moment Generating Function of Discrete Uniform Distributions",
+    subtitle = "The shape of the MGF changes with the number of outcomes (N)",
+    x = expression(italic(t)),
+    y = expression(italic(M)[Y](italic(t))),
+    color = "Distribution"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+print(mgf_plot)
+
+# --- Plot 2: Moments vs. Parameters ---
+cat("\n--- Plotting Moments vs. N ---\n")
+
+# Calculate moments for a range of N values (assuming a=1 for simplicity)
+N_values <- 2:50
+df_moments_plot <- data.frame(
+  N = N_values,
+  mean = (1 + N_values) / 2,
+  variance = (N_values^2 - 1) / 12
+)
+
+moments_plot <- ggplot(df_moments_plot, aes(x = N)) +
+  geom_line(aes(y = mean, color = "Mean"), size = 1.2) +
+  geom_line(aes(y = variance, color = "Variance"), size = 1.2) +
+  labs(
+    title = "Mean and Variance vs. Number of Outcomes (N)",
+    subtitle = "The mean is linear with N, while the variance is quadratic.",
+    x = "Number of Outcomes (N)",
+    y = "Value",
+    color = "Moment"
+  ) +
+  scale_color_manual(values = c("Mean" = "#3B82F6", "Variance" = "#9D174D")) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+print(moments_plot)
+
+```
+

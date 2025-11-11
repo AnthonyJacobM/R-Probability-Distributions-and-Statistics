@@ -1,0 +1,89 @@
+---
+title: "Central Limit Theorem with Binomial Example"
+author: Anthony Morciglio
+date: 10/02/2025
+output: html_document
+---
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+```
+
+## Central Limit Theorem with the Binomial Distribution
+
+We demonstrate how the Central Limit Theorem (CLT) approximates the Binomial distribution to the Normal distribution for a large number of samples.
+
+### Example Setup
+
+Suppose each light bulb has a probability $p = 0.1$ of being defective, and we test $n = 100$ bulbs. 
+Then:
+
+* Mean: $\mu = np = 10$
+* Variance: $\sigma^2 = np(1-p) = 9$, so $\sigma = 3$
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+n <- 100
+p <- 0.1
+mu <- n * p
+sigma <- sqrt(n * p * (1 - p))
+mu; sigma
+```
+
+### Exact Binomial Probability
+
+We compute the probability that at most 8 bulbs are defective.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+p_exact <- pbinom(8, size = n, prob = p)
+p_exact
+```
+
+### Normal Approximation (with Continuity Correction)
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+z <- (8.5 - mu) / sigma
+p_approx <- pnorm(z)
+p_approx
+```
+
+### Monte Carlo Simulation
+
+We use simulation to approximate $\mathbb{P}(Y \leq 8)$.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+set.seed(123)
+sim <- rbinom(1e5, size = n, prob = p)
+mean(sim <= 8)
+```
+
+### Visualization
+
+We compare the binomial probabilities with the normal approximation.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+library(ggplot2)
+
+# Range around the mean
+y_vals <- 0:30
+binom_probs <- dbinom(y_vals, size = n, prob = p)
+norm_approx <- dnorm(y_vals, mean = mu, sd = sigma)
+
+df <- data.frame(
+  y = y_vals,
+  Binomial = binom_probs,
+  NormalApprox = norm_approx
+)
+
+ggplot(df, aes(x = y)) +
+  geom_col(aes(y = Binomial), fill = "steelblue", alpha = 0.6) +
+  geom_line(aes(y = NormalApprox), color = "black", size = 1.2) +
+  labs(
+    title = "Binomial Distribution vs Normal Approximation",
+    y = "Probability",
+    x = "Number of defective bulbs"
+  ) +
+  theme_minimal()
+```
+
+This shows how the CLT allows us to approximate the Binomial distribution with a Normal distribution when the number of trials is large (here $n=100$).
+
+

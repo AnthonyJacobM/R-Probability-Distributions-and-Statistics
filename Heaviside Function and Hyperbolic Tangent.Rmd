@@ -1,0 +1,62 @@
+---
+title: "Approximating the Heaviside Step Function with the Hyperbolic Tangent"
+author: "Anthony Morciglio"
+date: "11/11/2025"
+output: html_document
+---
+
+## The Hyperbolic Tangent Function
+
+In this demonstration, we visualize how the **hyperbolic tangent function**  
+\[
+f(x) = \frac{1}{2}[1 + \tanh(kx)]
+\]
+approaches the **Heaviside step function** \( H(x) \) as the steepness parameter \( k \) increases.
+
+The parameter \( k \) controls how rapidly the function transitions from 0 to 1:
+- For **small** \( k \), the function transitions gradually — forming a smooth "S"-shaped curve.
+- For **large** \( k \), the transition becomes nearly vertical around \( x = 0 \), approximating a perfect step.
+
+We will plot \( f(x) \) for several \( k \)-values and compare them to the ideal Heaviside step function.
+
+---
+
+```{r heaviside-tanh, echo=TRUE, message=FALSE, warning=FALSE}
+# Load required libraries
+library(ggplot2)
+library(dplyr)
+
+# Define range for x-values
+x <- seq(-3, 3, length.out = 400)
+
+# Define k-values for comparison
+k_values <- c(1, 2, 5, 10, 20)
+
+# Create a data frame with all k-values
+data <- expand.grid(x = x, k = k_values) %>%
+  mutate(
+    tanh_approx = 0.5 * (1 + tanh(k * x)),    # Smoothed Heaviside approximation
+    heaviside = ifelse(x < 0, 0, 1)           # True Heaviside step
+  )
+
+# Create Custom Blue Pallette
+blue_palette <- colorRampPalette(c("#A8D8FF", "#0073CF"))(length(k_values))
+
+# Create the plot
+ggplot(data, aes(x = x, y = tanh_approx, color = factor(k), group = k)) +
+  geom_line(size = 1) +
+  geom_line(aes(y = heaviside), color = "black", linetype = "dashed", size = 1) +
+  scale_color_manual(values = blue_palette, name = "k-value") +
+  labs(
+    title = "The Hyperbolic Tangent Function Approaching the Heaviside Step Function",
+    subtitle = expression(paste("Comparison of ", (1/2)*(1 + tanh(k*x)), " for various ", k)),
+    x = "x",
+    y = expression(f(x)),
+    caption = "Dashed black line represents the ideal Heaviside step function"
+  ) +
+  theme_minimal(base_size = 10) +
+  theme(
+    legend.position = "top",
+    plot.title = element_text(face = "bold", color = "blue")
+  )
+```

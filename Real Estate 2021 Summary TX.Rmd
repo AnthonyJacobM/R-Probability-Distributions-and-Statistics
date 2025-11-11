@@ -1,0 +1,426 @@
+---
+title: "Real Estate 2021 Summary"
+author: "Anthony Morciglio"
+date: "2025-06-30"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning = FALSE, message = FALSE, echo = FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+
+## Property Data Analysis: School Performance, Pricing, and Sales Velocity
+This document provides R code and analysis to explore the relationships between various property features, school performance, pricing, and sales dynamics within a Property_Schools dataset.
+
+```{r, include=FALSE, warning = FALSE, message = FALSE, echo = FALSE}
+library(tidyverse)
+library(corrplot) # For correlation plots
+library(viridis)
+library(viridisLite)
+
+# --- Data Loading ---
+f1 <- "C:/Users/Anthony Morciglio/OneDrive/Documents/Work/Real Estate Investor Tool/School Data Investor Analysis.csv"
+
+# Read the data that was cleaned in Excel and exported as a CSV file.
+df <- read_csv(f1)
+
+# --- Initial Data Inspection ---
+# Display the first few rows of the data
+tail(df)
+
+# Get a summary of each column (min, max, mean, median, quartiles, NA count)
+summary(df)
+
+# Check the structure of the data (data types)
+#str(df)
+
+# Check for missing values in each column
+#colSums(is.na(df))
+
+# --- Data Cleaning and Preparation (Assumptions and Adjustments) ---
+# It's crucial to ensure your column names match exactly.
+# I'm assuming column names like:
+# ''EM - Great Schools'' (can be numeric or categorical, e.g., A, B, C)
+# 'Listing_Price', 'CDOM' (Cumulative Days on Market for Sales Velocity)
+# 'Building_Square_Footage', 'Bedrooms', 'Bathrooms'
+# 'Lot_Size', 'Lot_Price', 'Pool_Area' (TRUE/FALSE or 1/0)
+# 'Property_Type' (e.g., 'rental', 'single_family_home')
+# 'Year_Built', 'Number_of_Stories'
+
+# Convert 'Pool_Area' to a logical/factor if it's not already
+# Assuming 'Pool_Area' might be 'TRUE'/'FALSE' strings or 1/0 numbers
+if ("Pool_Area" %in% names(df)) {
+  df <- df %>%
+    mutate(Pool_Area = as.factor(case_when(
+      tolower(as.character(Pool_Area)) == "true" | Pool_Area == 1 ~ "Yes",
+      tolower(as.character(Pool_Area)) == "false" | Pool_Area == 0 ~ "No",
+      TRUE ~ NA_character_ # Handle other cases as NA
+    )))
+}
+
+# Ensure 'Property_Type' is a factor
+if ("Property_Type" %in% names(df)) {
+  df <- df %>%
+    mutate(Property_Type = as.factor(Property_Type))
+}
+
+# Ensure ''EM - Great Schools'' is appropriate (e.g., factor if A,B,C; numeric if 1-100)
+# For demonstration, let's assume it's numeric for correlation, but keep flexibility.
+# If it's categorical (A, B, C), you might convert it to ordered factor or numeric for analysis.
+# Example for categorical ratings:
+# df <- df %>% mutate('EM - Great Schools' = factor('EM - Great Schools', ordered = TRUE, levels = c("F", "D", "C", "B", "A")))
+
+```
+
+## Impact of School Performance on Property Value & Sales
+This section explores how school performance ratings influence property pricing and how quickly properties sell.  Indicators for property selling performance include: CDOM (cumulative days on the market), listing price, and sales velocity.
+
+# Question 1: How do School Performance Ratings correlate with Listing Price?
+Analysis: We'll examine the relationship between school performance (EM - Great Schools) and Listing Price. If school performance is numeric (0 - 10), we can calculate a correlation coefficient. If it's categorical (e.g., A, B, C), we'll use box plots to compare price distributions across different rating categories.  We can also change the class of the school performance variable from numeric to categorical and construct a boxplot.
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+if (is.numeric(df$'EM - Great Schools') && "Listing_Price" %in% names(df)) {
+  correlation_price_schools <- cor(df$'EM - Great Schools', df$Listing_Price, use = "pairwise.complete.obs")
+  cat("Correlation between School Performance Ratings and Listing Price:", correlation_price_schools, "\n\n")
+
+} 
+
+
+ggplot(df, aes(x = `EM - Great Schools`)) +
+  geom_histogram(binwidth = 1, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of EM - Great Schools Ratings",
+       x = "EM - Great Schools", y = "Count") +
+  theme_minimal()
+  
+
+ggplot(df, aes(x = `EM - Great Schools`, y = `List Price`, 
+               color = `List Price`, size = `CDOM`)) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  scale_color_viridis(option = "YlGnBu", name = "List Price", direction = -1) +
+  labs(title = "Listing Price vs. School Performance Ratings",
+       x = "EM - Great Schools", y = "Listing Price", size = "CDOM") +
+  theme_minimal()
+
+
+# Construct a boxplot to observe the qualitative differences in measures of central tendency and spread.
+
+# Step 1: Compute average List Price per combination of School Rating and Property Type
+avg_prices <- df %>%
+  group_by(`EM - Great Schools`, `Property Type`) %>%
+  summarise(AvgPrice = mean(`List Price`, na.rm = TRUE), .groups = "drop")
+
+# Step 2: Join the summarized averages back to the original dataframe
+df_plot <- df %>%
+  left_join(avg_prices, by = c("EM - Great Schools", "Property Type"))
+
+# Step 3: Plot stratified boxplot with color fill based on AvgPrice
+ggplot(df_plot, aes(x = factor(`EM - Great Schools`), y = `List Price`, fill = `EM - Great Schools`)) +
+  geom_boxplot(na.rm = TRUE) +
+  scale_fill_gradientn(colors = c("red", "white", "green"), name = "School Rating") +
+  scale_y_continuous(labels = scales::dollar) +
+  facet_wrap(~ `Property Type`, scales = "free_y") +
+  labs(title = "Listing Price Distribution by School Rating and Property Type",
+       x = "EM - Great Schools", y = "List Price") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+  
+# Results: Higher Performing Schools have a higher Listing Price.
+The boxplot suggests that schools with higher performance have a greater median (50th percentile) list price and properties located in lower performing school zones have a lower list price.
+There could be other factors that influence the list price such as the building square footage, number of bedrooms, and number of bathrooms.
+
+# Question 2: Do properties in areas with higher School Performance Ratings have a faster Sales Velocity (lower CDOM)?
+Analysis: We'll investigate the relationship between School Performance Ratings and CDOM (Cumulative Days on Market). A lower CDOM indicates faster sales velocity where sales velocity is calculated by taking the list price and dividing by the CDOM.
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+
+# Assuming 'EM - Great Schools' is numeric for correlation
+if (is.numeric(df$'EM - Great Schools') && "CDOM" %in% names(df)) {
+  correlation_cdom_schools <- cor(df$'EM - Great Schools', df$CDOM, use = "pairwise.complete.obs")
+  cat("Correlation between School Performance Ratings and CDOM:", correlation_cdom_schools, "\n\n")
+
+  # Scatter plot for numeric ratings
+  ggplot(df, aes(x = factor('EM - Great Schools'), y = CDOM)) +
+    geom_point(alpha = 0.6) +
+    geom_smooth(method = "lm", se = FALSE, color = "red") +
+    labs(title = "CDOM vs. School Performance Ratings",
+         x = "EM - Great Schools", y = "CDOM (Days on Market)") +
+    theme_minimal()
+} else if (is.factor(df$'EM - Great Schools') && "CDOM" %in% names(df)) {
+  # Box plot for categorical ratings
+  ggplot(df, aes(x = 'EM - Great Schools', y = CDOM)) +
+    geom_boxplot() +
+    labs(title = "CDOM Distribution by School Performance Ratings",
+         x = "School Performance Ratings", y = "CDOM (Days on Market)") +
+    theme_minimal()
+}
+
+# Remove NA values and ensure 'EM - Great Schools' is a factor
+df_clean <- df %>%
+  filter(!is.na(`EM - Great Schools`), !is.na(CDOM)) %>%
+  mutate(`EM - Great Schools` = factor(`EM - Great Schools`))
+
+# Scatterplot with red-white-green color scale
+ggplot(df_clean, aes(x = `EM - Great Schools`, y = CDOM, color = CDOM)) +
+  geom_jitter(alpha = 0.7, width = 0.2, size = 2) +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +
+  scale_color_gradient(low = "black", high = "black", name = "CDOM") +
+  labs(title = "CDOM vs. School Performance Ratings",
+       x = "EM - Great Schools", y = "CDOM (Days on Market)") +
+  theme_minimal()
+  
+
+avg_cdom <- df %>%
+  group_by(`EM - Great Schools`, `Property Type`) %>%
+  summarise(AvgCDOM = mean(`CDOM`, na.rm = TRUE), .groups = "drop")
+
+df_plot2 <- df %>%
+  left_join(avg_cdom, by = c("EM - Great Schools", "Property Type"))
+
+# Boxplot to visualize the variability:
+ggplot(df_plot2, aes(x = factor(`EM - Great Schools`), y = `CDOM`, fill = `EM - Great Schools`)) +
+  geom_boxplot(na.rm = TRUE) +
+  scale_fill_gradientn(colors = c("red", "white", "green"), name = "School Rating") +
+  facet_wrap(~ `Property Type`, scales = "free_y") +
+  labs(title = "Listing Price Distribution by School Rating and Property Type",
+       x = "EM - Great Schools", y = "CDOM") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+# Observation: 
+Single-Family Homes in high and low performing school zones sell faster.  Higher performing school zones have higher quality homes and lower performing school zones have lower listing prices.
+
+
+# Question 3: 
+Is there a premium on Listing Price for properties within top-rated school districts, even when controlling for other features like Building Square Footage and Number of Bedrooms/Bathrooms?
+We can generate a linear regression model to test for influence on the features on the list price of the properties.  One observation is that the list price is not normally distributed suggesting their might be higher variability at the tails of the distribution.
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+
+# Ensure relevant columns are numeric and handle NAs for regression
+df_reg <- df %>%
+  select('List Price', 'EM - Great Schools', 'Building SqFt', 'Bedrooms', 'Baths Full') %>%
+  drop_na()
+
+if (nrow(df_reg) > 0) {
+  # Convert 'EM - Great Schools' to numeric if it's a factor for regression,
+  # or ensure it's already numeric.
+  # If it's categorical (A, B, C), you might need to create dummy variables or treat it as ordered factor.
+  # For simplicity, assuming it's numeric for this regression.
+  # If it's factor, the lm() function will automatically create dummy variables.
+  if (is.factor(df_reg$'EM - Great Schools')) {
+    df_reg$'EM - Great Schools Numeric' <- as.numeric(df_reg$'EM - Great Schools')
+    model_price_premium <- lm(`List Price` ~ `EM - Great Schools` + `Building SqFt` + Bedrooms + `Baths Full`, data = df_reg)
+  } else {
+    model_price_premium <- lm(`List Price` ~ `EM - Great Schools` + `Building SqFt` + Bedrooms + `Baths Full`, data = df_reg)
+  }
+
+  cat("\n--- Regression Model: Listing Price Premium by School Performance ---\n")
+  summary(model_price_premium)
+} else {
+  cat("\nNot enough complete data to run regression for Listing Price Premium.\n")
+}
+
+
+# We can visualize the linear regression model by evaluating the different charts: 
+plot(model_price_premium, which = 1) # Residuals vs Fitted
+plot(model_price_premium, which = 2) # Normal Q-Q plot - Straight line indicates a Normal Distribution
+plot(model_price_premium, which = 3) # Scale-Location plot (homoscedasticity) - Straight line indicates constant variance, steeper line indicates higher variance
+
+# Predicted vs Actual Values Plot
+# Get predicted values
+df_reg$predicted_price <- predict(model_price_premium, newdata = df_reg)
+
+# Plot actual vs. predicted
+library(ggplot2)
+ggplot(df_reg, aes(x = `List Price`, y = predicted_price)) +
+  geom_point(alpha = 0.6) +
+  geom_abline(intercept = 0, slope = 1, color = "red", linetype = "dashed") + # Add a 45-degree line
+  labs(title = "Actual vs. Predicted List Price",
+       x = "Actual List Price",
+       y = "Predicted List Price") +
+  theme_minimal() +
+  coord_fixed(ratio = 1) # Ensures equal scaling
+plot(model_price_premium, which = 5) # Residuals vs Leverage
+
+# Multi-Dimensional Scatterplot to visualize correlation between variables:
+library(rgl)
+plot3d(df_reg$`EM - Great Schools`, df_reg$`Building SqFt`, df_reg$`List Price`,
+        xlab = "Great Schools Score", ylab = "Building SqFt", zlab = "List Price")
+ rgl.planes(a = coef(model_price_premium)[2],
+            b = coef(model_price_premium)[3],
+            c = -1,
+            d = coef(model_price_premium)[1],
+            alpha = 0.5, color = "lightblue")
+```
+            
+The regression model shows the theoretical quantiles are not normally distributed and the variability of the distribution is greater at the lower fitted values.  
+
+# Question 4: How does the presence of a pool within higher performing schools affect the listing price or sales velocity?
+We can filter out the poor performing schools and with the remaining high performing schools, we can evaludate the CDOM and Listing Price for properties with and without a pool.  
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+library(dplyr)
+library(ggplot2)
+library(scales)
+
+# Define what constitutes "highly-rated" (e.g., top 25% or specific rating like 'A')
+# For numeric ratings, let's assume top quartile. For categorical, pick a top category.
+# Adjust this threshold based on your data's distribution.
+if (is.numeric(df$'EM - Great Schools')) {
+  high_rating_threshold <- quantile(df$'EM - Great Schools', 0.75, na.rm = TRUE)
+  higher_rated_properties <- df %>%
+    filter('EM - Great Schools' >= high_rating_threshold)
+} else if (is.factor(df$'EM - Great Schools')) {
+  # Example for categorical: filter for 'A' rated schools
+  higher_rated_properties <- df %>%
+    filter('EM - Great Schools' == "A") # Adjust "A" to your top category
+} else {
+  
+  higher_rated_properties <- data.frame() # Empty if no valid rating type
+}
+
+# Step 1: Summarize by Pool Area and EM - Great Schools
+summary_df <- higher_rated_properties %>%
+  group_by(`Pool Area`, `EM - Great Schools`) %>%
+  summarise(
+    Avg_CDOM = mean(CDOM, na.rm = TRUE),
+    Avg_List_Price = mean(`List Price`, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+# Step 2: Boxplot - List Price vs EM - Great Schools
+ggplot(higher_rated_properties, aes(x = factor(`EM - Great Schools`), y = `List Price`)) +
+  geom_boxplot(fill = "skyblue") +
+  scale_y_continuous(labels = dollar) +
+  labs(title = "List Price vs EM - Great Schools",
+       x = "EM - Great Schools", y = "List Price") +
+  theme_minimal()
+
+# Step 3: Boxplot - CDOM vs EM - Great Schools
+ggplot(higher_rated_properties, aes(x = factor(`EM - Great Schools`), y = CDOM)) +
+  geom_boxplot(fill = "orange") +
+  labs(title = "CDOM vs EM - Great Schools",
+       x = "EM - Great Schools", y = "CDOM (Days on Market)") +
+  theme_minimal()
+
+# Step 4: Boxplot - List Price vs Pool Area
+ggplot(higher_rated_properties, aes(x = factor(`Pool Area`), y = `List Price`)) +
+  geom_boxplot(fill = "lightgreen") +
+  scale_y_continuous(labels = dollar) +
+  labs(title = "List Price vs Pool Area",
+       x = "Pool Area", y = "List Price") +
+  theme_minimal()
+
+# Step 5: Dual Boxplot - List Price vs EM - Great Schools, Faceted by Pool Area
+ggplot(higher_rated_properties, aes(x = factor(`EM - Great Schools`), y = `List Price`)) +
+  geom_boxplot(aes(fill = factor(`Pool Area`))) +
+  scale_y_continuous(labels = dollar) +
+  facet_wrap(~ `Pool Area`) +
+  labs(title = "List Price vs EM - Great Schools by Pool Area",
+       x = "EM - Great Schools", y = "List Price", fill = "Pool Area") +
+  theme_minimal()
+
+ggplot(summary_df, aes(x = factor(`EM - Great Schools`), y = factor(`Pool Area`), fill = Avg_List_Price)) +
+  geom_tile(color = "grey80") +
+  scale_fill_gradient(low = "white", high = "darkgreen", labels = scales::dollar) +
+  labs(title = "Avg List Price by School Rating and Pool Area, Faceted by Property Type",
+       x = "EM - Great Schools", y = "Pool Area", fill = "Avg List Price") +
+  theme_minimal()
+
+ggplot(higher_rated_properties, aes(x = `List Price`, y = CDOM, color = `EM - Great Schools`)) +
+  geom_point(alpha = 0.6) +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_wrap(~ `Property Type`) +
+  scale_x_continuous(labels = scales::dollar) +
+  labs(title = "CDOM vs List Price, Colored by School Rating and Faceted by Property Type",
+       x = "List Price", y = "CDOM", color = "School Rating") +
+  theme_minimal()
+
+ggplot(higher_rated_properties, aes(x = factor(`EM - Great Schools`), fill = factor(`Pool Area`))) +
+  geom_bar(position = "fill") +
+  facet_wrap(~ `Property Type`) +
+  labs(title = "Proportion of Pool Properties by School Rating and Property Type",
+       x = "EM - Great Schools", y = "Proportion", fill = "Pool Area") +
+  theme_minimal()
+
+ggplot(higher_rated_properties, aes(x = factor(`EM - Great Schools`), y = `List Price`, fill = factor(`Pool Area`))) +
+  geom_boxplot() +
+  scale_y_continuous(labels = scales::dollar) +
+  labs(title = "List Price by School Rating and Pool Area, Faceted by Property Type",
+       x = "EM - Great Schools", y = "List Price", fill = "Pool Area") +
+  theme_minimal()
+
+
+```
+
+# Observation: 
+Our results indicate that properties with pool areas have a much higher listing price (on average).  Interestingly, as the school performance increases, the probability that a property will have a pool also increases suggesting a positive correlation between school performance and quality in amenities.  For properties that have a pool, the distribution is highly skewed as the the third quartile (top of the box and whisker plot with teal color) is much higher in the listing price compared to the median (50th percentile) and 25th percentile.  This suggests that there might be other factors that influence the list price such as the number of bedrooms, bathrooms, and building square footage.
+
+
+
+```{r, warning = FALSE, message = FALSE, echo = FALSE}
+# library(dplyr)
+# library(ggplot2)
+# 
+# df$`Sales Velocity` <- df$`List Price`/df$CDOM
+# 
+# # Clean, filter, and extract top 15 cities by average Sales Velocity
+# top_cities <- df %>%
+#   filter(!is.na(`Sales Velocity`), !is.na(`City/Location`)) %>%
+#   group_by(`City/Location`) %>%
+#   summarize(avg_velocity = mean(`Sales Velocity`, na.rm = TRUE)) %>%
+#   arrange(desc(avg_velocity)) %>%
+#   slice_head(n = 15) %>%
+#   pull(`City/Location`)http://127.0.0.1:17927/graphics/61acc075-e34b-422f-a6e7-14b6f496fa0f.png
+# 
+# # Filter original data to include only top 15 cities
+# df_city <- df %>%
+#   filter(!is.na(`Sales Velocity`), 
+#          `City/Location` %in% top_cities) %>%
+#   mutate(`City/Location` = factor(`City/Location`, 
+#                                   levels = top_cities))
+# 
+# # Boxplot by City (top 15 by Sales Velocity)
+# ggplot(df_city, aes(x = reorder(`City/Location`, `Sales Velocity`, FUN = median), y = `Sales Velocity`)) +
+#   geom_boxplot(fill = "steelblue") +
+#   coord_flip() +
+#   labs(title = "Top 15 Cities in Texas by Sales Velocity",
+#        x = "City", y = "Sales Velocity") +
+#   theme_minimal()
+
+# library(dplyr)
+# library(ggplot2)
+# library(tigris)     # for shapefiles
+# library(sf)         # for spatial manipulation
+# 
+# # Get Texas ZIP code shapes
+# tx_zips <- zctas(cb = TRUE, year = 2020) %>%
+#   filter(STATEFP == "48")  # 48 = Texas
+# 
+# # Summarize average sales velocity per ZIP
+# zip_velocity <- df %>%
+#   filter(!is.na(`Zip Code`), !is.na(`Sales Velocity`)) %>%
+#   group_by(`Zip Code`) %>%
+#   summarise(avg_velocity = mean(`Sales Velocity`, na.rm = TRUE), .groups = "drop") %>%
+#   mutate(`Zip Code` = as.character(`Zip Code`))
+# 
+# # Join spatial data
+# tx_zips <- tx_zips %>%
+#   mutate(ZCTA5CE10 = as.character(ZCTA5CE10)) %>%
+#   inner_join(zip_velocity, by = c("ZCTA5CE10" = "Zip Code"))
+# 
+# # Plot heatmap
+# ggplot(tx_zips) +
+#   geom_sf(aes(fill = avg_velocity), color = NA) +
+#   scale_fill_gradient(low = "green", high = "red", name = "Avg Sales Velocity") +
+#   labs(title = "Geographic Heatmap of Sales Velocity by ZIP Code in Texas") +
+#   theme_minimal()
+
+
+```
+

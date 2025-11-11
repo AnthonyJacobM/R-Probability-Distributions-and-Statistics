@@ -1,0 +1,88 @@
+---
+title: "Negative Binomial Distribution - Entropy and MGF"
+author: "Anthony Morciglio"
+date: "09/19/2025"
+output: html_document
+---
+
+### Entropy of the Negative Binomial Distribution
+
+The **entropy** of a discrete distribution measures the average uncertainty (in *nats* when using the natural logarithm) associated with observing outcomes from the distribution. For the **Negative Binomial Distribution** with parameters $r$ (number of successes) and $p$ (probability of success), the entropy is defined as:
+
+$$
+H(Y) = - \sum_{k=0}^{\infty} P(Y = k) \, \log \big( P(Y = k) \big)
+$$
+
+where
+
+$$
+P(Y = k) = \binom{k+r-1}{k} (1-p)^k p^r
+$$
+
+is the probability mass function (PMF).
+
+Because the summation extends to infinity, the R code approximates entropy by truncating the series at a large number of terms. This is done by computing probabilities up to $k = m$, where $m$ increases, and observing how the partial entropy values converge as $m \to \infty$.
+
+In the code:
+
+- `nb_pmf(k, r, p)` computes the PMF of the Negative Binomial distribution.  
+- `nb_entropy(r, p, max_k)` calculates entropy up to a truncation index $k = \text{max\_k}$.  
+- A plot of entropy versus the truncation index shows how the estimated entropy stabilizes, which reflects the convergence of the infinite sum definition.
+
+Thus, the visualization of entropy with respect to the number of summation terms provides an empirical way of checking the accuracy of entropy estimates for the Negative Binomial distribution.
+
+
+```{r setup, warning = FALSE, message = FALSE}
+# Load libraries
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Function to compute Negative Binomial PMF
+nb_pmf <- function(k, r, p) {
+  choose(k + r - 1, k) * (1 - p)^k * p^r
+}
+
+# Function to compute entropy for a given max k
+nb_entropy <- function(r, p, max_k = 100) {
+  probs <- sapply(0:max_k, function(k) nb_pmf(k, r, p))
+  -sum(probs * log(probs), na.rm = TRUE)
+}
+
+# --- 1. Plot Entropy vs Number of Summation Terms ---
+
+r_val <- 4
+p_val <- 0.25
+max_terms <- 85
+
+entropy_values <- data.frame(
+  Terms = 10:max_terms,
+  Entropy = sapply(10:max_terms, function(m) nb_entropy(r_val, p_val, m))
+)
+
+entropy_plot <- ggplot(entropy_values, aes(x = Terms, y = Entropy)) +
+  geom_line(color = "blue", size = 1) +
+  labs(
+    title = paste("Convergence of Entropy for NB(r=", r_val, ", p=", p_val, ")", sep = ""),
+    x = "Number of Terms in Summation",
+    y = "Entropy (nats)"
+  ) +
+  theme_minimal(base_size = 14)
+
+# --- 2. Plot Moment Generating Function (MGF) ---
+
+mgf_nb <- function(t, r, p) {
+  (p / (1 - (1 - p) * exp(t)))^r
+}
+
+# Define t values (restricted domain so denominator > 0)
+t_vals <- seq(-1.5, -log(1 - p_val) - 0.05, length.out = 200)
+r_values <- 3:7
+
+mgf_data <- expand.grid(t = t_vals, r = r_values) %>%
+  mutate(MGF = mapply(function(tt, rr) mgf_nb(tt, rr, p_val), t, r))
+
+
+# --- Display the plots ---
+print(entropy_plot)
+```

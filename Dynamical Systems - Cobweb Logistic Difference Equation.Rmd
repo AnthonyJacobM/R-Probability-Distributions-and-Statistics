@@ -1,0 +1,72 @@
+---
+title: "Dynamical Systems - Cobweb Logistic Difference Equation"
+author: "Anthony Morciglio"
+date: "10/29/2025"
+output: html_document
+---
+
+## Cobweb Diagrams for the Logistic Difference Equation
+
+In this section, we visualize the **cobweb diagrams** for the logistic difference equation
+
+\[
+x_{t+1} = r \, x_t (1 - x_t)
+\]
+
+for various values of the parameter \( r \).  
+The **cobweb plot** graphically represents how each iteration of the function maps one population value to the next.
+
+The R code below defines a reusable function `cobweb_plot()` that:
+1. Draws the logistic function \( f(x) = r x (1 - x) \) and the identity line \( y = x \).
+2. Iterates a starting point \( x_0 \) for a given number of steps.
+3. Plots the resulting cobweb path to illustrate whether the sequence converges, oscillates, or behaves chaotically.
+4. Produces static cobweb diagrams for \( r = 2.5, 3.2, 3.5, \text{ and } 3.9 \).
+
+Each diagram demonstrates a distinct dynamical behavior:
+- **r = 2.5:** Stable fixed point  
+- **r = 3.2:** Period-2 oscillation  
+- **r = 3.5:** Period-4 or quasi-chaotic behavior  
+- **r = 3.9:** Chaotic trajectory
+
+```{r cobweb-logistic, fig.width=6, fig.height=5, echo=TRUE, message=FALSE, warning=FALSE}
+# Define the logistic map function
+logistic_map <- function(x, r) {
+  r * x * (1 - x)
+}
+
+# Define a function to generate cobweb plot
+cobweb_plot <- function(r, x0 = 0.2, n = 100, title_suffix = "") {
+  # Create data for plotting the function and y=x line
+  x_vals <- seq(0, 1, length.out = 500)
+  y_vals <- logistic_map(x_vals, r)
+  
+  # Initialize iteration values
+  x <- numeric(n + 1)
+  x[1] <- x0
+  
+  # Store points for cobweb lines
+  cobweb_x <- c()
+  cobweb_y <- c()
+  
+  for (i in 1:n) {
+    x[i + 1] <- logistic_map(x[i], r)
+    cobweb_x <- c(cobweb_x, x[i], x[i], x[i + 1])
+    cobweb_y <- c(cobweb_y, x[i], x[i + 1], x[i + 1])
+  }
+  
+  # Plot the logistic function and cobweb
+  plot(x_vals, y_vals, type = "l", col = "blue", lwd = 2,
+       xlab = expression(x[t]), ylab = expression(x[t+1]),
+       main = paste("Cobweb Diagram for r =", r, title_suffix))
+  lines(x_vals, x_vals, col = "black", lwd = 1, lty = 2)
+  lines(cobweb_x, cobweb_y, col = "red", lwd = 0.8)
+}
+
+# Generate cobweb plots for selected r values
+par(mfrow = c(2, 2))
+cobweb_plot(2.5)
+cobweb_plot(3.2)
+cobweb_plot(3.5)
+cobweb_plot(3.9)
+par(mfrow = c(1, 1))
+```

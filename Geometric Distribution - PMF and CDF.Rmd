@@ -1,0 +1,117 @@
+---
+title: "Geometric Distribution - PMF and CDF"
+author: "Anthony Morciglio"
+date: "09/05/2025"
+output: html_document
+---
+
+## Visualizing the Geometric Distribution
+
+This document explores the Geometric Distribution, which models the number of trials needed to achieve the first success in a sequence of independent trials. It will present visual representations of the distribution's key functions.The Probability Mass Function (PMF) shows the probability of the first success occurring on a specific trial, while the Cumulative Distribution Function (CDF) shows the probability of the first success occurring on or before a given trial.We will also briefly illustrate the connection between the Geometric Distribution and the Exponential Distribution, which is its continuous counterpart. A plot will be provided to visually demonstrate how the discrete geometric distribution approximates the continuous exponential distribution when the probability of success is small.
+
+
+```{r setup, warning = FALSE, message = FALSE}
+# This script requires the 'ggplot2' and 'dplyr' packages.
+# If you can't run this code, please uncomment and run the following lines:
+# install.packages("ggplot2")
+# install.packages("dplyr")
+
+library(ggplot2)
+library(dplyr)
+
+# --- Define the parameters for the distribution ---
+# Choose three different values for p
+p_values <- c(0.2, 0.5, 0.8)
+max_k <- 20
+
+# Create plots for the individual distributions
+for (p in p_values) {
+  # --- Calculate PMF, CDF, Mean, and Median ---
+  k_values <- 1:max_k
+  pmf_values <- dgeom(k_values - 1, prob = p)
+  cdf_values <- pgeom(k_values - 1, prob = p)
+  
+  # Calculate the theoretical mean and median
+  mean_value <- 1 / p
+  median_value <- ceiling(-1 / log2(1 - p))
+  
+  # Create a data frame for plotting
+  plot_data <- data.frame(
+    k = k_values,
+    pmf = pmf_values,
+    cdf = cdf_values
+  )
+  
+  # --- Plot the PMF (Density) ---
+  pmf_plot <- ggplot(plot_data, aes(x = k, y = pmf)) +
+    geom_bar(stat = "identity", fill = "#3b82f6", alpha = 0.8) +
+    geom_vline(xintercept = mean_value, color = "#ef4444", linetype = "dashed", size = 1) +
+    geom_vline(xintercept = median_value, color = "#10b981", linetype = "dashed", size = 1) +
+    labs(
+      title = paste("Geometric Distribution PMF (p =", p, ")"),
+      x = "Number of Trials (k)",
+      y = "Probability"
+    ) +
+    annotate("text", x = mean_value, y = max(pmf_values), label = paste("Mean =", round(mean_value, 2)), color = "#ef4444", vjust = -1, hjust = -0.1) +
+    annotate("text", x = median_value, y = max(pmf_values), label = paste("Median =", median_value), color = "#10b981", vjust = -2, hjust = -0.1) +
+    theme_minimal(base_size = 14)
+  
+  # --- Plot the CDF (Distribution) ---
+  cdf_plot <- ggplot(plot_data, aes(x = k, y = cdf)) +
+    geom_step(size = 1.2, color = "#3b82f6") +
+    geom_point(color = "#3b82f6", size = 3) +
+    geom_vline(xintercept = mean_value, color = "#ef4444", linetype = "dashed", size = 1) +
+    geom_vline(xintercept = median_value, color = "#10b981", linetype = "dashed", size = 1) +
+    labs(
+      title = paste("Geometric Distribution CDF (p =", p, ")"),
+      x = "Number of Trials (k)",
+      y = "Cumulative Probability"
+    ) +
+    annotate("text", x = mean_value, y = 1.0, label = paste("Mean =", round(mean_value, 2)), color = "#ef4444", vjust = -1, hjust = -0.1) +
+    annotate("text", x = median_value, y = 1.0, label = paste("Median =", median_value), color = "#10b981", vjust = -2, hjust = -0.1) +
+    theme_minimal(base_size = 14)
+  
+  # Print both plots for the current p value
+  print(pmf_plot)
+  print(cdf_plot)
+}
+
+# --- Plot Geometric vs. Exponential for a small p value ---
+p_small <- 0.2
+lambda_val <- p_small
+lambda <- lambda_val
+max_x <- 20
+
+# Create data for Geometric Distribution (discrete)
+geom_data <- data.frame(
+  x = 1:max_x,
+  y = dgeom(0:(max_x-1), prob = p_small)
+)
+
+# Create data for Exponential Distribution (continuous)
+exp_data <- data.frame(
+  x = seq(0, max_x, by = 0.1),
+  y = dexp(seq(0, max_x, by = 0.1), rate = lambda_val)
+)
+
+# Plot both distributions on the same graph
+geom_exp_plot <- ggplot() +
+  # Plot Geometric PMF as bars
+  geom_bar(data = geom_data, aes(x = x, y = y, fill = "Geometric"), stat = "identity", alpha = 0.8, width = 0.5) +
+  # Plot Exponential PDF as a line
+  geom_line(data = exp_data, aes(x = x, y = y, color = "Exponential"), size = 1.5) +
+  # Add labels and title
+  labs(
+    title = paste0("Geometric Distribution vs. Exponential Distribution (λ = ", lambda, ")"),
+    x = "Value (k or x)",
+    y = "Probability/Density"
+  ) +
+  # Customize colors and legend
+  scale_fill_manual(values = c("Geometric" = "#3b82f6"), name = "Distribution") +
+  scale_color_manual(values = c("Exponential" = "#ef4444"), name = "Distribution") +
+  theme_minimal(base_size = 14)
+
+# Print the final combined plot
+print(geom_exp_plot)
+```
+

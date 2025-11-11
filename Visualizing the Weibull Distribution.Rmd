@@ -1,0 +1,73 @@
+---
+title: "Visualizing the Weibull Distribution"
+author: "Anthony Morciglio"
+date: "11/11/2025"
+output: html_document
+---
+
+```{r weibull-distribution, echo=TRUE, message=FALSE, warning=FALSE}
+# -----------------------------------------------------------
+# Title: Weibull Distribution Example
+# Description:
+# This code illustrates the Weibull Distribution for the example
+# given in the blog post. We define the Weibull PDF and CDF for
+# shape parameter k = 2.5 and scale parameter λ = 1000.
+#
+# The Weibull distribution is often used to model lifetimes or
+# failure times in reliability engineering. By plotting both the
+# PDF and CDF, we visualize how the distribution behaves and how
+# probabilities accumulate over time.
+#
+# The plots show:
+#   - The PDF (density function), which represents the likelihood
+#     of failure at a specific time.
+#   - The CDF, which represents the probability that failure
+#     occurs before a given time.
+# -----------------------------------------------------------
+
+# Load necessary library
+library(ggplot2)
+
+# Define parameters
+shape_k <- 2.5   # shape parameter
+scale_l <- 1000  # scale parameter
+
+# Create a sequence of x values (time or lifetime)
+x <- seq(0, 2000, length.out = 400)
+
+# Compute the Weibull PDF and CDF
+pdf_vals <- dweibull(x, shape = shape_k, scale = scale_l)
+cdf_vals <- pweibull(x, shape = shape_k, scale = scale_l)
+
+# Create a combined data frame for plotting
+weibull_df <- data.frame(x = x, PDF = pdf_vals, CDF = cdf_vals)
+
+# Plot 1: Probability Density Function (PDF)
+pdf_plot <- ggplot(weibull_df, aes(x = x, y = PDF)) +
+  geom_line(color = "blue", size = 1.2) +
+  labs(title = paste0("Weibull Probability Density Function (k = ", shape_k, ", λ = ", scale_l, ")"),
+       x = "Lifetime (hours)",
+       y = "Density") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5))
+
+# Plot 2: Cumulative Distribution Function (CDF)
+cdf_plot <- ggplot(weibull_df, aes(x = x, y = CDF)) +
+  geom_line(color = "red", size = 1.2) +
+  labs(title = paste0("Weibull Cumulative Distribution Function (k = ", shape_k, ", λ = ", scale_l, ")"),
+       x = "Lifetime (hours)",
+       y = "Cumulative Probability") +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5))
+
+# Display both plots
+pdf_plot
+cdf_plot
+
+# Compute an example probability:
+# Probability that a light bulb fails before 800 hours
+x_val <- 800
+prob_failure <- pweibull(x_val, shape = shape_k, scale = scale_l)
+cat("Probability that a light bulb fails before 800 hours (P(X < 800)) =", round(prob_failure, 3), "\n")
+```
+

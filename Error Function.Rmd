@@ -1,0 +1,96 @@
+---
+title: "Error Function"
+author: "Anthony Morciglio"
+date: "10/21/2025"
+output: html_document
+---
+
+### Understanding the Error Function
+
+The **error function**, denoted as \\( erf(x) \\), is a special function that frequently appears in **probability**, **statistics**, and **partial differential equations**.  
+
+It is defined as:  
+
+\[
+\operatorname{erf}(x) = \frac{2}{\sqrt{\pi}} \int_0^x e^{-t^2} \, dt
+\]
+
+This function is closely related to the **cumulative distribution function (CDF)** of the **standard normal distribution**, expressed as:  
+
+\[
+\Phi(x) = \frac{1}{2}\left[1 + \operatorname{erf}\left(\frac{x}{\sqrt{2}}\right)\right].
+\]
+
+By rearranging, we can write the error function in terms of the normal CDF:  
+
+\[
+\operatorname{erf}(x) = 2 \, \Phi(x \sqrt{2}) - 1.
+\]
+
+The error function transitions smoothly from **-1 to 1** and represents **cumulative probability** under the Gaussian curve.  
+
+In the example below, we compute and visualize \\( \operatorname{erf}(x) \\) alongside the corresponding transformation of the standard normal CDF to verify their equivalence.
+
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# ============================================================
+# Visualizing and Understanding the Error Function (erf)
+# ============================================================
+
+# Description:
+# The error function erf(x) is a special function that arises in probability,
+# statistics, and partial differential equations. It is defined as:
+#     erf(x) = (2 / sqrt(pi)) * ∫₀ˣ e^(-t²) dt
+# This function is closely related to the cumulative distribution function (CDF)
+# of the standard normal distribution:
+#     Φ(x) = (1/2) * [1 + erf(x / sqrt(2))]
+# Hence, erf(x) = 2 * Φ(x * sqrt(2)) - 1
+#
+# The error function transitions smoothly from -1 to 1 and describes cumulative
+# probabilities under the Gaussian curve. In this example, we will compute and
+# visualize erf(x) alongside the corresponding transformation of the standard
+# normal CDF to verify their equivalence.
+
+# Load libraries
+library(ggplot2)
+
+# Define the error function using its relationship to the normal CDF
+erf <- function(x) {
+  2 * pnorm(x * sqrt(2)) - 1
+}
+
+# Define a sequence of x-values
+x <- seq(-3, 3, length.out = 300)
+
+# Compute erf(x) and the normal CDF Phi(x)
+data <- data.frame(
+  x = x,
+  erf = erf(x),
+  Phi = pnorm(x)
+)
+
+# Plot the error function and its relationship to the normal CDF
+ggplot(data, aes(x = x)) +
+  geom_line(aes(y = erf, color = "erf(x)"), size = 1.3) +
+  geom_line(aes(y = 2 * Phi - 1, color = "2Φ(x) - 1"), linetype = "dashed", size = 1) +
+  geom_hline(yintercept = c(-1, 1), linetype = "dotted", color = "gray40") +
+  scale_color_manual(values = c("erf(x)" = "blue", "2Φ(x) - 1" = "red")) +
+  labs(
+    title = "The Error Function (erf) and its Relation to the Normal CDF",
+    subtitle = expression(erf(x) == (2/sqrt(pi)) * integral(e^{-t^2} * dt, 0, x)),
+    x = "x",
+    y = "Function Value",
+    color = "Legend"
+  ) +
+  theme_minimal(base_size = 14)
+
+# Interpretation:
+# The solid blue line shows the computed error function erf(x),
+# while the dashed red line shows the equivalent expression 2Φ(x) - 1,
+# where Φ(x) is the standard normal CDF.
+# Both curves coincide perfectly, confirming that erf(x) = 2Φ(x√2) - 1.
+# The horizontal dotted lines at -1 and +1 indicate the asymptotic limits
+# of the error function as x → ±∞.
+
+```
+

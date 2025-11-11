@@ -1,0 +1,86 @@
+---
+title: "Bakery Sales Mock Project"
+author: "Anthony Morciglio"
+date: "2024-07-25"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+# Load libraries of the data:
+
+library(ggplot2)
+library(dplyr)
+library(tidyverse)
+library(readr)
+library(skimr)
+library(readxl)
+library(viridis)
+library(flextable)
+
+options(warn = -1)
+
+f1 <- "C:/Users/Anthony Morciglio/OneDrive/Coursera Google Data Analytics/Bakery Sales 2020 RW.csv"
+df <- read.csv(f1)
+
+```
+
+
+## A Small Project to understand basic features in R
+
+This mock project consists of data points with different features such as the following:
+
+- Name of the item (Nombre).
+
+- Cost of the item (Cuesta).
+
+- Quantity of the item (Cantidad).
+
+- Revenue of the items (Dinero) calculated by taking the product of quantity and cost.
+
+## Look at the data in the form of a Table
+
+```{r, echo = TRUE}
+
+# Summarize key features of the data:
+df
+glimpse(df)
+str(df)
+summary(df)
+skim_without_charts(df)
+
+```
+
+## Summarize Via Table
+
+We can aggregate the data based on name type.  That is, group by name and summarize the total price and number of goods sold by using the group_by() and summarise() functions.
+
+```{r, echo = TRUE}
+TP <- df %>% group_by(Nombre) %>% summarise(Total_Price = sum(Cuesta * Cantidad), Total_Sold = sum(Cantidad))
+TP %>% flextable()
+```
+
+
+## Slide with Graphing
+
+```{r, echo = FALSE}
+tmp <- data.frame(TP)
+ggplot(data = tmp, aes(x = Nombre, y = Total_Price), fill = 'Nombre') + 
+  geom_bar(stat = 'identity', aes(fill = tmp$Nombre)) + 
+    labs(x = "Nombre", y = "Total Price", title = "Bar Chart: Total Price vs Nombre", fill = "Nombre") +
+  scale_fill_manual(values = viridis(n = length(unique(TP$Nombre)))) + 
+  theme_linedraw(base_size = 18)
+                 
+ggplot(data = tmp, aes(x = Nombre, y = Total_Sold), fill = 'Nombre') + 
+  geom_bar(stat = 'identity', aes(fill = tmp$Nombre)) + 
+    labs(x = "Nombre", y = "Total Sold", title = "Bar Chart: Total Sold vs Nombre", fill = "Nombre") +
+  scale_fill_manual(values = viridis(n = length(unique(TP$Nombre)))) + 
+  theme_linedraw(base_size = 18)
+
+```
+
+
+## Takeaways
+Cupcakes are the most popular item at the bakery.  Over 250 Cupcakes were sold at the local bakery this week compared to a less popular item, the Muffin, which had 54 of them sold.  Although Pies and Muffins had similar quantities (cuantidad) sold, Pies brought much more profit since it cost $5 per each.

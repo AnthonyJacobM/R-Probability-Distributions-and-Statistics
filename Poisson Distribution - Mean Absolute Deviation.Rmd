@@ -1,0 +1,96 @@
+---
+title: "Poisson Distribution: Mean Absolute Deviation"
+author: "Anthony Morciglio"
+date: "09/09/2025"
+output: html_document
+---
+
+## Visualizing the Poisson Distribution
+
+The R script you were provided models the number of discrete, independent events occurring over a fixed interval using the Poisson distribution. In this example, the events are thunderstorms and the interval is a summer season. The script uses a mean rate of $\lambda = 5$ thunderstorms and demonstrates how to calculate the probability of a specific number of thunderstorms occurring. It also simulates data from this distribution to show how the simulated results align with the theoretical probabilities.
+
+```{r setup, warning = FALSE, message = FALSE}
+# This script demonstrates the Poisson distribution using a real-world example:
+# the number of thunderstorms in a summer season.
+
+# We will assume a historical average of 5 thunderstorms per summer season.
+# This value, lambda (λ), is the key parameter for the Poisson distribution.
+lambda <- 5
+
+# --- Part 1: Calculating Probabilities ---
+
+# The dpois() function calculates the probability mass function (PMF).
+# It tells us the probability of observing exactly a specific number of events.
+
+# What is the probability of having exactly 3 thunderstorms in a season?
+prob_3_thunderstorms <- dpois(x = 3, lambda = lambda)
+cat("Probability of exactly 3 thunderstorms:", round(prob_3_thunderstorms, 4), "\n")
+
+# What is the probability of having exactly 5 thunderstorms in a season (the mean)?
+prob_5_thunderstorms <- dpois(x = 5, lambda = lambda)
+cat("Probability of exactly 5 thunderstorms:", round(prob_5_thunderstorms, 4), "\n\n")
+
+# The ppois() function calculates the cumulative distribution function (CDF).
+# It tells us the probability of having a certain number of events OR FEWER.
+
+# What is the probability of having 5 or fewer thunderstorms?
+prob_5_or_fewer <- ppois(q = 5, lambda = lambda)
+cat("Probability of 5 or fewer thunderstorms:", round(prob_5_or_fewer, 4), "\n")
+
+# We can also use it to find the probability of MORE than a certain number.
+# What is the probability of having more than 8 thunderstorms?
+prob_more_than_8 <- 1 - ppois(q = 8, lambda = lambda)
+cat("Probability of more than 8 thunderstorms:", round(prob_more_than_8, 4), "\n")
+
+# --- Part 2: Simulating Data and Visualization ---
+
+# The rpois() function generates random numbers from a Poisson distribution.
+# We will simulate 1000 summer seasons to see what a sample of our data looks like.
+
+set.seed(42) # Set a seed for reproducibility
+num_simulations <- 1000
+simulated_thunderstorms <- rpois(n = num_simulations, lambda = lambda)
+
+# Let's inspect the first few simulated values
+cat("\nFirst 10 simulated seasons:", simulated_thunderstorms[1:10], "\n\n")
+
+# We can find the average of our simulated data to see how close it is to the theoretical lambda.
+simulated_mean <- mean(simulated_thunderstorms)
+cat("Simulated mean of thunderstorms:", round(simulated_mean, 2), "\n")
+cat("Theoretical mean (lambda):", lambda, "\n\n")
+
+# Now, let's visualize the results.
+# We'll create a histogram of our simulated data and overlay the theoretical PMF.
+# This shows how our sample of 1000 seasons matches the expected probabilities.
+
+# Create a data frame for plotting
+data <- data.frame(
+  x = 0:15,
+  y_pmf = dpois(x = 0:15, lambda = lambda)
+)
+
+# Plot the histogram
+hist(simulated_thunderstorms,
+     breaks = seq(-0.5, max(simulated_thunderstorms) + 0.5, by = 1),
+     freq = FALSE,
+     col = "lightblue",
+     main = "Simulated Thunderstorms per Summer Season (n=1000)",
+     xlab = "Number of Thunderstorms",
+     ylab = "Density",
+     border = "white")
+
+# Overlay the theoretical Poisson PMF as a line plot
+lines(data$x, data$y_pmf,
+      type = "b", # 'b' for both points and lines
+      col = "red",
+      lwd = 2)
+
+# Add a legend
+legend("topright",
+       legend = c("Simulated Frequency", "Theoretical PMF"),
+       col = c("lightblue", "red"),
+       pch = c(NA, 1),
+       lwd = c(NA, 2),
+       lty = c(NA, 1),
+       bg = "white")
+```

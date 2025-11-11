@@ -1,0 +1,57 @@
+---
+title: "Area Under the Student T Distribution"
+author: "Anthony Morciglio"
+date: "10/24/2025"
+output: html_document
+---
+
+## Demonstrating that the Area Under the Student's *t*-Distribution Equals 1
+
+The Student's *t*-distribution with \(\nu\) degrees of freedom has the probability density function (PDF):
+
+\[
+f(t) = \frac{\Gamma\!\left(\frac{\nu+1}{2}\right)}{\sqrt{\nu\pi}\,\Gamma\!\left(\frac{\nu}{2}\right)} \left(1+\frac{t^2}{\nu}\right)^{-\frac{\nu+1}{2}}.
+\]
+
+This R code:
+1. Plots the *t*-distribution curve for a chosen degree of freedom.  
+2. Numerically integrates the PDF over \((-∞, ∞)\) to confirm that the total area under the curve is equal to 1.  
+3. Shades the region under the curve to visually represent this area.
+
+---
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Load required library
+library(ggplot2)
+
+# Set degrees of freedom
+nu <- 5
+
+# Create a sequence of t-values
+t_vals <- seq(-5, 5, length.out = 400)
+
+# Compute PDF values using built-in dt() function
+pdf_vals <- dt(t_vals, df = nu)
+
+# Create a data frame for plotting
+df <- data.frame(t = t_vals, density = pdf_vals)
+
+# Numerically integrate to confirm total area = 1
+area <- integrate(function(x) dt(x, df = nu), -Inf, Inf)$value
+
+# Display the computed area
+cat("Numerically computed area under the t-distribution (df =", nu, "):", area, "\n")
+
+# Plot the t-distribution and shade under the curve
+ggplot(df, aes(x = t, y = density)) +
+  geom_area(fill = "skyblue", alpha = 0.4) +
+  geom_line(color = "blue", size = 1) +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = paste0("Student's t-Distribution (df = ", nu, ")"),
+    subtitle = "Shaded area under the curve ≈ 1",
+    x = "t value",
+    y = "Density"
+  )
+```
+

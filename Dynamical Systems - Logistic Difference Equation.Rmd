@@ -1,0 +1,90 @@
+---
+title: "Dynamical Systems - Logistic Difference Equation"
+author: "Anthony Morciglio"
+date: "10/28/2025"
+output: html_document
+---
+
+
+## *The Logistic Map Function - Computing a Finite Difference Equation*
+
+- Defines a **logistic map function** to iteratively compute \( x_{t+1} = r x_t (1 - x_t) \).  
+- Simulates the map for four key values of \( r \), each corresponding to a distinct dynamical regime.  
+- Uses **ggplot2** to create a **faceted visualization**, showing:
+  - **Stable equilibrium** at \( r = 2.5 \),
+  - **Periodic oscillation** at \( r = 3.2 \),
+  - **Period-doubling** at \( r = 3.5 \),
+  - **Chaos** at \( r = 3.9 \).
+
+---
+
+
+```{r logistic-map-simulation, echo=TRUE, message=FALSE, warning=FALSE}
+# Load required library
+library(ggplot2)
+
+# Logistic map function
+logistic_map <- function(r, x0 = 0.5, n = 1000, discard = 500) {
+  x <- numeric(n)
+  x[1] <- x0
+  for (t in 1:(n - 1)) {
+    x[t + 1] <- r * x[t] * (1 - x[t])
+  }
+  # Discard initial transient behavior
+  return(x[(discard + 1):n])
+}
+
+### Time Series Visualization for Selected r values ###
+r_values <- c(2.5, 3.2, 3.5, 3.9)
+simulations <- lapply(r_values, function(r) {
+  data.frame(
+    t = 1:100,
+    x = logistic_map(r, n = 100, discard = 0),
+    r = as.factor(r)
+  )
+})
+df_traj <- do.call(rbind, simulations)
+
+p1 <- ggplot(df_traj, aes(x = t, y = x, color = r)) +
+  geom_line(size = 1) +
+  facet_wrap(~r, ncol = 2, scales = "free_y") +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Logistic Map Dynamics for Selected r Values",
+    subtitle = expression(paste(x[t+1] == r*x[t]*(1 - x[t]))),
+    x = "Time step (t)",
+    y = expression(x[t]),
+    color = "Growth rate (r)"
+  ) +
+  theme(plot.title = element_text(face = "bold", color = "#003366"),
+        strip.text = element_text(face = "bold", size = 13))
+
+### Bifurcation Diagram ###
+r_seq <- seq(2.5, 4, by = 0.001)  # range of r values
+bifurcation_data <- data.frame()
+
+for (r in r_seq) {
+  x <- logistic_map(r, n = 1200, discard = 800)  # longer simulation for steady state
+  bifurcation_data <- rbind(
+    bifurcation_data,
+    data.frame(r = rep(r, length(x)), x = x)
+  )
+}
+
+p2 <- ggplot(bifurcation_data, aes(x = r, y = x)) +
+  geom_point(color = "blue", alpha = 0.1, shape = 16, size = 0.4) +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Bifurcation Diagram of the Logistic Map",
+    subtitle = expression(paste("Steady-state behavior of ", x[t+1] == r*x[t]*(1 - x[t]))),
+    x = "Growth rate parameter (r)",
+    y = "Steady-state values of x"
+  ) +
+  theme(plot.title = element_text(face = "bold", color = "#003366"))
+
+# Display both plots
+p1
+p2
+
+```
+

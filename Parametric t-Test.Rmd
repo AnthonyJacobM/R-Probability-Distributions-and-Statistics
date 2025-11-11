@@ -1,0 +1,90 @@
+---
+title: "Visualizing the Paired t-Test Assumptions with Normal and Exponentially Distributed Data"
+name: "Anthony Morciglio"
+date: "11/07/2025"
+output: html_document
+---
+
+## Introduction
+
+In this section, we validate the **normality assumption** required for the *paired t-test* using two datasets: one generated from a normal distribution and another from an exponential (non-normal) distribution.  
+
+The **paired t-test** assumes that the *differences between paired observations* are approximately normally distributed.  
+We will:
+1. Generate paired samples (normal and exponential),
+2. Perform the paired t-test,
+3. Conduct the Shapiro–Wilk test for normality,
+4. Visualize the differences using a histogram and Q–Q plot.
+
+---
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+
+# Set random seed for reproducibility
+set.seed(123)
+
+# Generate paired data
+n <- 30
+x_norm <- rnorm(n, mean = 50, sd = 10)
+y_norm <- x_norm + rnorm(n, mean = 2, sd = 5)
+
+x_exp <- rexp(n, rate = 0.1)
+y_exp <- x_exp + rexp(n, rate = 0.1)
+
+# Compute differences
+diff_norm <- y_norm - x_norm
+diff_exp  <- y_exp - x_exp
+
+# Perform paired t-tests
+t_norm <- t.test(x_norm, y_norm, paired = TRUE)
+t_exp  <- t.test(x_exp, y_exp, paired = TRUE)
+
+# Shapiro-Wilk test for normality
+shapiro_norm <- shapiro.test(diff_norm)
+shapiro_exp  <- shapiro.test(diff_exp)
+
+# Print results
+cat("Paired t-test (Normal Data):\n")
+print(t_norm)
+cat("\nShapiro-Wilk Test (Normal Differences):\n")
+print(shapiro_norm)
+
+cat("\n--------------------------------------\n")
+
+cat("\nPaired t-test (Exponential Data):\n")
+print(t_exp)
+cat("\nShapiro-Wilk Test (Exponential Differences):\n")
+print(shapiro_exp)
+
+# Load plotting library
+library(ggplot2)
+library(gridExtra)
+
+# Create histogram plots for both distributions
+hist_norm <- ggplot(data.frame(diff_norm), aes(x = diff_norm)) +
+  geom_histogram(aes(y = ..density..), bins = 10, fill = "blue", color = "black") +
+  geom_density(color = "darkblue", size = 1) +
+  ggtitle("Histogram of Differences (Normal Data)") +
+  xlab("Difference") + ylab("Density") +
+  theme_minimal()
+
+hist_exp <- ggplot(data.frame(diff_exp), aes(x = diff_exp)) +
+  geom_histogram(aes(y = ..density..), bins = 10, fill = "red", color = "black") +
+  geom_density(color = "maroon", size = 1) +
+  ggtitle("Histogram of Differences (Exponential Data)") +
+  xlab("Difference") + ylab("Density") +
+  theme_minimal()
+
+# Create Q-Q plots for both distributions
+qq_norm <- ggplot(data.frame(sample = diff_norm), aes(sample = sample)) +
+  stat_qq(color = "blue") + stat_qq_line(color = "black") +
+  ggtitle("Q-Q Plot (Normal Data)") + theme_minimal()
+
+qq_exp <- ggplot(data.frame(sample = diff_exp), aes(sample = sample)) +
+  stat_qq(color = "red") + stat_qq_line(color = "black") +
+  ggtitle("Q-Q Plot (Exponential Data)") + theme_minimal()
+
+# Arrange plots for visual comparison
+grid.arrange(hist_norm, hist_exp, qq_norm, qq_exp, ncol = 2)
+```
+

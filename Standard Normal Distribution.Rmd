@@ -1,0 +1,98 @@
+---
+title: "Standard Normal Distribution"
+author: "Anthony Morciglio"
+date: "10/21/2025"
+output: html_document
+---
+
+## Exploring the Standard Normal Distribution
+
+### Demonstrating That the Area Under the Normal Curve Equals 1
+
+The following R code numerically verifies that the total area under the standard normal probability density function (PDF) equals 1.  
+This confirms that the normal distribution is properly normalized as a probability distribution.
+
+1. **Defining the Functions**  
+   - The **PDF** of the standard normal distribution is defined as  
+     \[
+     \phi(x) = \frac{1}{\sqrt{2\pi}} e^{-x^2/2}.
+     \]  
+     This describes how probability density is distributed across the real line.  
+
+   - The **CDF** (cumulative distribution function) is defined using the **error function** (`erf`),  
+     \[
+     \Phi(x) = \frac{1}{2}\Big[1 + \operatorname{erf}\Big(\frac{x}{\sqrt{2}}\Big)\Big],
+     \]  
+     which represents the probability that a random variable \( Y \sim N(0,1) \) is less than or equal to \( x \).
+
+2. **Numerical Integration**  
+   The code uses the `integrate()` function in R to numerically evaluate  
+   \[
+   \int_{-\infty}^{\infty} \phi(x)\,dx,
+   \]  
+   which should be equal to 1. This confirms the normalization property of the standard normal distribution.
+
+3. **Visualization of the PDF and CDF**  
+   - The **left plot** displays the standard normal PDF with the area under the curve shaded to visually indicate total probability.  
+   - The **right plot** shows the standard normal CDF computed via the error function. The CDF smoothly transitions from 0 to 1, illustrating cumulative probability as \( x \) increases.  
+
+4. **Verification Output**  
+   The code prints the result of the numerical integration, which should be approximately 1.000000, thereby confirming that the area under the standard normal curve equals 1.
+
+This demonstration ties together the analytical derivation involving the Gaussian integral and the computational verification using R.  
+It also shows how the error function naturally arises in the context of integrating the normal distribution, linking calculus, probability theory, and numerical computation.
+
+
+```
+```{r normal_integral_demo, echo=TRUE, message=FALSE, warning=FALSE}
+# -----------------------------------------
+# Numerical verification that ∫ φ(y) dy = 1
+# and visualization of Normal PDF and CDF
+# -----------------------------------------
+
+# Load required packages
+library(ggplot2)
+library(pracma)   # for erf() function
+
+# Define standard Normal PDF and CDF (using erf)
+phi <- function(y) (1/sqrt(2*pi)) * exp(-y^2 / 2)
+Phi <- function(y) 0.5 * (1 + erf(y / sqrt(2)))
+
+# Numerically integrate φ(y) from -∞ to ∞
+integral_value <- integrate(phi, -Inf, Inf)
+cat("Numerical estimate of ∫ φ(y) dy =", integral_value$value, "\n")
+
+# Create data for plotting
+y <- seq(-4, 4, length.out = 500)
+pdf_vals <- phi(y)
+cdf_vals <- Phi(y)
+
+# Plot PDF (Normal curve)
+p1 <- ggplot(data.frame(y, pdf_vals), aes(x = y, y = pdf_vals)) +
+  geom_area(fill = "skyblue", alpha = 0.4) +
+  geom_line(color = "blue", linewidth = 1.2) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "darkgray") +
+  labs(
+    title = "Standard Normal PDF",
+    subtitle = paste("Numerical Integral =", round(integral_value$value, 6)),
+    x = "y", y = "φ(y)"
+  ) +
+  theme_minimal(base_size = 14)
+
+# Plot CDF (using erf)
+p2 <- ggplot(data.frame(y, cdf_vals), aes(x = y, y = cdf_vals)) +
+  geom_line(color = "darkred", linewidth = 1.2) +
+  geom_hline(yintercept = 0.5, linetype = "dotted", color = "gray40") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray40") +
+  labs(
+    title = "Standard Normal CDF",
+    x = "y", y = "Φ(y)"
+  ) +
+  theme_minimal(base_size = 14)
+
+# Display plots side by side
+library(patchwork)
+p1 + p2
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

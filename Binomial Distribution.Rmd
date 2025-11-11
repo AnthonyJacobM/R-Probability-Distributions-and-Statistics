@@ -1,0 +1,123 @@
+---
+title: "Binomial Distribution"
+author: "Anthony Morciglio"
+date: "2025-08-27"
+output: html_document
+---
+
+## R Markdown
+
+The R code for the Binomial distribution is divided into two main sections to showcase the Probability Mass Function (PMF) and the Cumulative Distribution Function (CDF).
+
+The PMF section uses the built-in `dbinom()` function in R to calculate the probability of getting an exact number of successes. The code calculates the probability of getting exactly 4 successes in 10 trials, which aligns with the blog post's explanation of the PMF. The accompanying plot shows this as individual points on a graph, visually representing the discrete probabilities.
+
+The CDF section uses the `pbinom()` function, which is designed to calculate the cumulative probability the probability of getting at most a certain number of successes. This section calculates the probability of getting 4 or fewer successes. The CDF plot then illustrates this concept as a step function, where the height of each step represents the total accumulated probability up to that point.
+
+```{r setup, warning = FALSE, message = FALSE}
+# --- Required Libraries ---
+# Install these packages if you haven't already
+# install.packages("ggplot2")
+# install.packages("dplyr")
+
+# Load the required libraries for plotting and data manipulation
+library(ggplot2)
+library(dplyr)
+
+# --- Parameters for the Binomial Distribution ---
+#
+# n: The number of independent trials.
+# p: The probability of success in each trial.
+#
+n <- 10
+p <- 0.4
+
+# --- Working with the Binomial Distribution ---
+
+# Calculating the Probability Mass Function (PMF)
+# Use the dbinom() function to find the probability of exactly 'k' successes.
+# For example, let's find the probability of exactly 4 successes in 10 trials.
+k_pmf <- 4
+probability_pmf <- dbinom(x = k_pmf, size = n, prob = p)
+cat("PMF: Probability of exactly", k_pmf, "successes is", round(probability_pmf, 4), "\n")
+
+# Calculating the Cumulative Distribution Function (CDF)
+# Use the pbinom() function to find the probability of 'k' or fewer successes.
+# For example, let's find the probability of 4 or fewer successes.
+k_cdf <- 4
+probability_cdf <- pbinom(q = k_cdf, size = n, prob = p)
+cat("CDF: Probability of at most", k_cdf, "successes is", round(probability_cdf, 4), "\n")
+
+# --- Visualizing the Binomial Distribution ---
+
+# Create a data frame for the theoretical distribution (PMF)
+# This will be used to plot the dots representing the theoretical probabilities.
+theoretical_data <- data.frame(
+  k = 0:n,
+  probability = dbinom(x = 0:n, size = n, prob = p)
+)
+
+# Simulate data to create a histogram
+# We will simulate 1000 random samples from the binomial distribution
+# to see how the observed frequencies compare to the theoretical probabilities.
+set.seed(42) # for reproducibility
+simulated_data <- rbinom(n = 1000, size = n, prob = p)
+simulated_df <- data.frame(k = simulated_data)
+
+# Create the combined plot: histogram, dots, and connected lines
+ggplot(simulated_df, aes(x = k)) +
+  # Create a histogram of the simulated data
+  geom_histogram(
+    aes(y = after_stat(count/sum(count))), # Normalize count to show proportions
+    binwidth = 1, fill = "#a3e635", color = "#4d7c0f", alpha = 0.7
+  ) +
+  # Add the theoretical probability dots on top
+  geom_point(data = theoretical_data, aes(x = k, y = probability), color = "#ef4444", size = 4) +
+  # Add lines connecting the theoretical dots to show the trend
+  geom_line(data = theoretical_data, aes(x = k, y = probability), color = "#ef4444", size = 1) +
+  labs(
+    title = paste("Binomial Distribution (n = ", n, ", p = ", p, ")"),
+    subtitle = "Theoretical PMF vs. Simulated Data Histogram",
+    x = "Number of Successes (k)",
+    y = "Probability / Frequency"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+# --- Visualizing the Cumulative Distribution Function (CDF) ---
+#
+# This plot shows the cumulative probability. The theoretical CDF is a step
+# function, and the empirical CDF from the simulated data provides a comparison.
+#
+
+# Create a data frame for the theoretical CDF
+theoretical_cdf_data <- data.frame(
+  k = 0:n,
+  cumulative_probability = pbinom(q = 0:n, size = n, prob = p)
+)
+
+# Create the combined CDF plot: theoretical step function and empirical dots
+ggplot(simulated_df, aes(x = k)) +
+  # Use stat_ecdf to plot the empirical cumulative distribution
+  stat_ecdf(geom = "step", color = "#a3e635", size = 1.2) +
+  # Add points to the empirical CDF
+  stat_ecdf(geom = "point", color = "#a3e635", size = 3) +
+  # Add the theoretical CDF as a step function with a different color
+  geom_step(data = theoretical_cdf_data, aes(x = k, y = cumulative_probability), color = "#ef4444", size = 1.2) +
+  geom_point(data = theoretical_cdf_data, aes(x = k, y = cumulative_probability), color = "#ef4444", size = 4) +
+  labs(
+    title = paste("Binomial Cumulative Distribution Function (n = ", n, ", p = ", p, ")"),
+    subtitle = "Theoretical vs. Empirical CDF",
+    x = "Number of Successes (k)",
+    y = "Cumulative Probability"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+```
+

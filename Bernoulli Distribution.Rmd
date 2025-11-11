@@ -1,0 +1,108 @@
+---
+title: "Bernoulli Distribution"
+author: "Anthony Morciglio"
+date: "2025-08-25"
+output: html_document
+---
+
+
+
+## The Bernoulli Distribution as a Special Case of the Binomial Distribution
+
+The Bernoulli Distribution as a Special Case of the Binomial Distribution
+The Bernoulli Distribution is the simplest model for a single statistical trial with only two possible outcomes, conventionally labeled as "success" or "failure." This model is entirely defined by a single parameter, p, which represents the probability of a success. The provided R code begins by setting this key parameter and then proceeds to illustrate the distribution's core features. It defines a custom function to compute the Probability Mass Function (PMF) for the two outcomes, and another to calculate the Cumulative Distribution Function (CDF) as a step function. Furthermore, the script directly applies the mathematical formulas for the distribution's mean (p) and variance (p(1−p)), demonstrating how these fundamental properties are derived directly from the probability of success. Finally, the code visualizes these concepts through a bar plot of the PMF and a step plot of the CDF, making the abstract statistical concepts tangible and easy to understand.
+
+```{r setup}
+knitr::opts_chunk$set(echo = TRUE)
+
+# R code to demonstrate the Bernoulli Distribution based on the blog post.
+
+# 1. Set the single parameter for the Bernoulli trial:
+#    'p' is the probability of success.
+#    We will use a value of 0.7 for this example.
+p <- 0.7
+cat("--------------------------------------------------\n")
+cat("Bernoulli Distribution with a success probability (p) of:", p, "\n")
+cat("--------------------------------------------------\n\n")
+
+# 2. Probability Mass Function (PMF):
+#    This function calculates the probability of a specific outcome (x).
+#    The only valid outcomes are x=0 (failure) and x=1 (success).
+bernoulli_pmf <- function(x, p) {
+  if (x == 1) {
+    # If the outcome is a success, the probability is p.
+    return(p)
+  } else if (x == 0) {
+    # If the outcome is a failure, the probability is (1-p).
+    return(1 - p)
+  } else {
+    # For any other outcome, the probability is zero.
+    stop("Error: The Bernoulli trial outcome must be 0 or 1.")
+  }
+}
+
+# Calculate and print the probabilities for success and failure.
+prob_success <- bernoulli_pmf(1, p)
+prob_failure <- bernoulli_pmf(0, p)
+cat("Probability of success (X=1):", prob_success, "\n")
+cat("Probability of failure (X=0):", prob_failure, "\n\n")
+
+# 3. Cumulative Distribution Function (CDF):
+#    This function calculates the probability that the outcome is less than or
+#    equal to a given value (x).
+bernoulli_cdf <- function(x, p) {
+  if (x < 0) {
+    return(0)
+  } else if (x >= 0 && x < 1) {
+    return(1 - p)
+  } else {
+    return(1)
+  }
+}
+
+# Calculate and print the CDF for a few different values.
+cdf_at_neg_one <- bernoulli_cdf(-1, p)
+cdf_at_zero <- bernoulli_cdf(0, p)
+cdf_at_one <- bernoulli_cdf(1, p)
+cdf_at_two <- bernoulli_cdf(2, p)
+cat("Cumulative Distribution Function (CDF):\n")
+cat("  F(-1):", cdf_at_neg_one, "\n")
+cat("  F(0):", cdf_at_zero, "\n")
+cat("  F(1):", cdf_at_one, "\n")
+cat("  F(2):", cdf_at_two, "\n\n")
+
+# 4. Mean and Variance:
+#    These are calculated directly from the parameter 'p' as defined in the blog.
+bernoulli_mean <- p
+bernoulli_variance <- p * (1 - p)
+cat("Mean (Expected Value):", bernoulli_mean, "\n")
+cat("Variance:", bernoulli_variance, "\n\n")
+
+# 5. Plotting the Distributions
+
+# Plot 1: Probability Mass Function (PMF)
+# Create a bar plot to show the probability of each outcome.
+outcomes <- c(0, 1)
+probabilities <- c(bernoulli_pmf(0, p), bernoulli_pmf(1, p))
+
+# Use a bar plot for a clear visualization of a discrete distribution.
+barplot(probabilities, names.arg = outcomes,
+        main = "Bernoulli Distribution PMF",
+        xlab = "Outcome (x)", ylab = "Probability")
+
+# Plot 2: Cumulative Distribution Function (CDF)
+# The CDF of a discrete distribution is a step function.
+# We'll create points for the steps and then connect them.
+x_values <- c(-0.5, 0, 0, 1, 1, 1.5)
+y_values <- c(0, 0, 1-p, 1-p, 1, 1)
+
+# Plot the step function using the type='s' argument.
+plot(x_values, y_values, type = "s",
+     main = "Bernoulli Distribution CDF",
+     xlab = "x", ylab = "F(x)",
+     xlim = c(-0.5, 1.5), ylim = c(0, 1),
+     lwd = 2)
+
+# Add points to mark the jumps in the step function.
+points(c(0, 1), c(1-p, 1), pch = 16, cex = 1.5)
+```

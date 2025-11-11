@@ -1,0 +1,141 @@
+---
+title: "Exponential Distribution: Measures of Central Tendency"
+author: "Anthony Morciglio"
+date: "2025-08-22"
+output: html_document
+---
+
+## Understanding Where the Middle Is
+
+This R code provides a powerful visual companion to the analytical derivations in the blog post. By plotting the probability density function (PDF) of the exponential distribution and superimposing vertical lines at the calculated positions of the mean and median, the script visually demonstrates a key property of this skewed distribution. The plot makes it clear that the mean, pulled to the right by the distribution's long tail, is located at a larger value on the x-axis than the median. This visualization not only confirms the inequality you proved mathematically (e>2 implies Mean > Median) but also reinforces the conceptual difference between these two measures of central tendency for a non-symmetric distribution.
+
+
+```{r setup}
+# This script generates a plot of the exponential distribution's PDF and highlights
+# the location of the mean and median.
+
+# Required Library:
+# ggplot2 for creating high-quality, professional plots.
+
+# Check if ggplot2 is installed, if not, install it.
+if (!requireNamespace("ggplot2", quietly = TRUE)) {
+  install.packages("ggplot2")
+}
+
+# Load the library.
+library(ggplot2)
+
+# -----------------------------------------------------------------------------
+# 1. Define Parameters and Calculate Mean and Median
+# -----------------------------------------------------------------------------
+# Set a sample lambda value for the distribution.
+lambda <- 0.5
+
+# Calculate the mean (1/lambda) and median (ln(2)/lambda) based on the formulas
+# derived in the blog post.
+exponential_mean <- 1 / lambda
+exponential_median <- log(2) / lambda
+
+# -----------------------------------------------------------------------------
+# 2. Generate Data for Plotting
+# -----------------------------------------------------------------------------
+# Create a range of x-values for the plot. We will go up to a value
+# that includes the mean and median comfortably.
+x_values <- seq(0, 5, length.out = 1000)
+
+# Calculate the corresponding y-values using the exponential distribution PDF.
+# The PDF is f(x) = lambda * exp(-lambda * x).
+y_values <- lambda * exp(-lambda * x_values)
+
+# Create a data frame for ggplot.
+plot_data <- data.frame(x = x_values, y = y_values)
+
+# -----------------------------------------------------------------------------
+# 3. Create the Plot
+# -----------------------------------------------------------------------------
+# Use ggplot to create the visualization.
+distribution_plot <- ggplot(plot_data, aes(x = x, y = y)) +
+  # Add the main curve for the exponential distribution.
+  geom_line(color = "black", linewidth = 1) +
+  
+  # Add a vertical dashed line for the mean.
+  geom_vline(xintercept = exponential_mean, linetype = "dashed", color = "orange", linewidth = 1) +
+  
+  # Add a vertical dotted line for the median.
+  geom_vline(xintercept = exponential_median, linetype = "dotted", color = "blue", linewidth = 1) +
+  
+  # Add labels and a title.
+  labs(
+    title = "Exponential Distribution PDF with Mean and Median",
+    subtitle = bquote(lambda == .(lambda)),
+    x = "x",
+    y = "Probability Density"
+  ) +
+  
+  # Add text annotations to label the lines.
+  annotate("text", x = exponential_mean, y = max(plot_data$y) * 0.9, label = "Mean", 
+           color = "orange", vjust = -1, hjust = -0.1) +
+  annotate("text", x = exponential_median, y = max(plot_data$y) * 0.9, label = "Median", 
+           color = "blue", vjust = -1, hjust = -0.1) +
+  
+  # Set the theme and customize aesthetics.
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5))
+
+# Print the distribution plot.
+print(distribution_plot)
+
+# -----------------------------------------------------------------------------
+# 4. Plot Mean and Median vs. Lambda
+# -----------------------------------------------------------------------------
+# Create a range of lambda values to plot.
+lambda_values <- seq(0.1, 2, length.out = 100)
+
+# Calculate the corresponding mean and median values.
+mean_values <- 1 / lambda_values
+median_values <- log(2) / lambda_values
+
+# Create a data frame for ggplot.
+plot_data_vs_lambda <- data.frame(
+  lambda = lambda_values,
+  mean = mean_values,
+  median = median_values
+)
+
+# Reshape data to long format for easier plotting with ggplot.
+# This requires the tidyr package.
+if (!requireNamespace("tidyr", quietly = TRUE)) {
+  install.packages("tidyr")
+}
+library(tidyr)
+
+plot_data_vs_lambda_long <- pivot_longer(plot_data_vs_lambda, 
+                                         cols = c(mean, median), 
+                                         names_to = "measure", 
+                                         values_to = "value")
+
+# Create the ggplot.
+mean_median_plot <- ggplot(plot_data_vs_lambda_long, aes(x = lambda, y = value, color = measure)) +
+  # Add lines for both the mean and the median.
+  geom_line(linewidth = 1) +
+  # Customize colors.
+  scale_color_manual(values = c("mean" = "orange", "median" = "blue")) +
+  # Add labels and a title.
+  labs(
+    title = "Mean and Median vs. Lambda",
+    subtitle = "Exponential Distribution",
+    x = expression(lambda),
+    y = "Value",
+    color = "Measure"
+  ) +
+  # Set the theme and customize aesthetics.
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5))
+
+# Print the final plot.
+print(mean_median_plot)
+```
+
+

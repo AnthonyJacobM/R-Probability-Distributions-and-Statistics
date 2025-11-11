@@ -1,0 +1,66 @@
+---
+title: "Normal Distribution PDF and CDF Visualization"
+author: "Anthony Morciglio"
+date: "10/01/2025"
+output: html_document
+---
+
+```{r setup, warning = FALSE, message = FALSE}
+library(ggplot2)
+library(dplyr)
+
+# Parameters
+mu <- 0       # mean
+sigma <- 1    # standard deviation
+x <- seq(mu - 4*sigma, mu + 4*sigma, length.out = 1000)
+
+# PDF and CDF values
+pdf_vals <- dnorm(x, mean = mu, sd = sigma)
+cdf_vals <- pnorm(x, mean = mu, sd = sigma)
+
+df <- data.frame(x = x, pdf = pdf_vals, cdf = cdf_vals)
+
+# Breakpoints for shading regions
+bounds <- c(-3, -2, -1, 0, 1, 2, 3) * sigma + mu
+
+pdf_plot <- ggplot(df, aes(x, pdf)) +
+  geom_line(color="blue", size=1) +
+  # ±1σ
+  geom_area(data = subset(df, x >= mu - sigma & x <= mu + sigma),
+            aes(y=pdf), fill="blue", alpha=0.4) +
+  # ±2σ
+  geom_area(data = subset(df, x >= mu - 2*sigma & x <= mu + 2*sigma),
+            aes(y=pdf), fill="blue", alpha=0.25) +
+  # ±3σ
+  geom_area(data = subset(df, x >= mu - 3*sigma & x <= mu + 3*sigma),
+            aes(y=pdf), fill="blue", alpha=0.15) +
+  geom_vline(xintercept = mu, linetype="dashed", color="black", size=1) +
+  labs(title = "Normal Distribution PDF",
+       subtitle = "Shaded ±1, ±2, ±3 Standard Deviations",
+       x = "Y", y = "Density") +
+  annotate("text", x = mu, y = max(df$pdf)*0.8,
+           label = "Mean = Median = Mode", vjust = -1, color="black") +
+  theme_minimal(base_size=14)
+
+pdf_plot
+
+cdf_plot <- ggplot(df, aes(x, cdf)) +
+  geom_line(color="darkgreen", size=1) +
+  # ±1σ
+  geom_area(data = subset(df, x >= mu - sigma & x <= mu + sigma),
+            aes(y=cdf), fill="darkgreen", alpha=0.4) +
+  # ±2σ
+  geom_area(data = subset(df, x >= mu - 2*sigma & x <= mu + 2*sigma),
+            aes(y=cdf), fill="darkgreen", alpha=0.25) +
+  # ±3σ
+  geom_area(data = subset(df, x >= mu - 3*sigma & x <= mu + 3*sigma),
+            aes(y=cdf), fill="darkgreen", alpha=0.15) +
+  geom_vline(xintercept = mu, linetype="dashed", color="black", size=1) +
+  labs(title = "Normal Distribution CDF",
+       subtitle = "Shaded ±1, ±2, ±3 Standard Deviations",
+       x = "Y", y = "Cumulative Probability") +
+  annotate("text", x = mu, y = 0.5,
+           label = "Mean = Median = Mode", vjust = -1, color="black") +
+  theme_minimal(base_size=14)
+
+cdf_plot

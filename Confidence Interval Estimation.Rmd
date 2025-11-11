@@ -1,0 +1,76 @@
+---
+title: "Confidence Interval Estimation"
+author: "Anthony Morciglio"
+date: "10/28/2025"
+output: html_document
+---
+
+## Summary of the Confidence Interval
+- The confidence interval is computed using a test-statistic, sample size, and population parameter (standard deviation or average).  The most frequent usage of the confidence interval is an estimation of the population avarage using the sample average becuase the sample average is an unbiased estimator of the population average.  Other uses include estimating the population variance, when the variance is unknown and one hopes to estimate the population average, the sample standard deviation is used instead in conjunction with the Student's t-Distribution and t-statistic.
+- **Computes confidence intervals**:
+  - For the **mean** using the **Normal distribution**.
+  - For the **variance** using the **Chi-Square distribution**.
+- **Visualizes**:
+  - The **sampling distribution** of the data and highlights the mean confidence interval.
+  - The **Chi-Square density** with shaded regions corresponding to the critical area.
+- **Annotates** both plots with the **interval bounds** and **true parameter values** for clear interpretation.
+
+```
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# --- Confidence Intervals for Mean and Variance --- #
+set.seed(123)
+
+# Parameters for population
+mu <- 50           # true population mean
+sigma <- 10        # true population standard deviation
+n <- 30            # sample size
+alpha <- 0.05      # significance level
+
+# Simulate data from a Normal distribution
+data <- rnorm(n, mean = mu, sd = sigma)
+
+# --- 1. Confidence Interval for the Mean (Normal distribution) ---
+xbar <- mean(data)
+z_crit <- qnorm(1 - alpha/2)
+se <- sigma / sqrt(n)
+
+CI_mean <- c(xbar - z_crit * se, xbar + z_crit * se)
+
+# Visualization for the Mean CI
+library(ggplot2)
+
+df_mean <- data.frame(x = data)
+ggplot(df_mean, aes(x = x)) +
+  geom_histogram(aes(y = ..density..), bins = 10, fill = "skyblue", color = "black", alpha = 0.6) +
+  stat_function(fun = dnorm, args = list(mean = mu, sd = sigma), color = "red", size = 1) +
+  geom_vline(xintercept = xbar, color = "blue", linetype = "solid", size = 1.2) +
+  geom_vline(xintercept = CI_mean, color = "darkgreen", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = mu, color = "purple", linetype = "dotted", size = 1.2) +
+  labs(title = "Confidence Interval for the Mean (Normal Distribution)",
+       subtitle = sprintf("95%% CI: [%.2f, %.2f]", CI_mean[1], CI_mean[2]),
+       x = "Sample Values", y = "Density") +
+  theme_minimal()
+
+# --- 2. Confidence Interval for the Variance (Chi-Square distribution) ---
+s2 <- var(data)
+df <- n - 1
+chi2_lower <- qchisq(1 - alpha/2, df)
+chi2_upper <- qchisq(alpha/2, df)
+
+CI_var <- c((df * s2) / chi2_lower, (df * s2) / chi2_upper)
+
+# Create Chi-Square distribution for visualization
+x_vals <- seq(0, qchisq(0.999, df), length.out = 500)
+chi_df <- data.frame(x = x_vals, density = dchisq(x_vals, df))
+
+ggplot(chi_df, aes(x = x, y = density)) +
+  geom_line(color = "blue", size = 1) +
+  geom_area(data = subset(chi_df, x > chi2_upper & x < chi2_lower),
+            fill = "skyblue", alpha = 0.4) +
+  geom_vline(xintercept = c(chi2_upper, chi2_lower), color = "red", linetype = "dashed", size = 1) +
+  labs(title = "Chi-Square Distribution and Confidence Interval for Variance",
+       subtitle = sprintf("95%% CI for σ²: [%.2f, %.2f]", CI_var[1], CI_var[2]),
+       x = expression(chi^2), y = "Density") +
+  theme_minimal()
+```
+

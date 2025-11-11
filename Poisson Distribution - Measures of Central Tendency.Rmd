@@ -1,0 +1,71 @@
+---
+title: "Poisson Distribution: Measures of Central Tendency"
+author: "Anthony Morciglio"
+date: "08/07/2025"
+output: html_document
+---
+
+## Visualizing the Measures of Central Tendency of the Poisson Distribution
+
+This R script visualizes the measures of central tendency—mean, median, and mode—of the Poisson distribution. It computes the PMF and CDF for a given $\lambda$, then overlays vertical dashed lines to highlight the mean, median, and mode on each plot. The PMF plot shows the probability of discrete outcomes, while the CDF plot illustrates cumulative probabilities, providing a clear comparison of the distribution’s shape and its key central tendency measures.
+
+
+
+```{r setup, warning = FALSE, message = FALSE}
+# Load libraries
+library(ggplot2)
+library(dplyr)
+
+# Parameter
+lambda <- 5
+
+# Support of Y
+x <- 0:(lambda * 3)   # range wide enough to capture tail
+
+# PMF and CDF
+pmf <- dpois(x, lambda)
+cdf <- ppois(x, lambda)
+
+# Measures of central tendency
+mean_val <- lambda
+mode_val <- if (lambda %% 1 == 0) c(lambda - 1, lambda) else floor(lambda)
+
+# Compute median numerically (first x where CDF >= 0.5)
+median_val <- min(x[cdf >= 0.5])
+
+# Put into data frame
+df <- data.frame(x, pmf, cdf)
+
+### Plot PMF
+pmf_plot <- ggplot(df, aes(x, pmf)) +
+  geom_col(fill = "skyblue", color = "black") +
+  geom_vline(xintercept = mean_val, color = "red", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = median_val, color = "black", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = mode_val, color = "purple", linetype = "dashed", size = 1) +
+  labs(
+    title = paste0("Poisson(", lambda, ") PMF with Mean, Median, and Mode"),
+    x = "k", y = "P(Y = k)"
+  ) +
+  annotate("text", x = mean_val, y = max(pmf), label = "Mean", color = "red", vjust = -1) +
+  annotate("text", x = median_val, y = max(pmf)/2, label = "Median", color = "black", vjust = -1) +
+  annotate("text", x = mode_val[1], y = max(pmf)/1.5, label = "Mode", color = "purple", vjust = -1)
+
+### Plot CDF
+cdf_plot <- ggplot(df, aes(x, cdf)) +
+  geom_point(color = "blue") +
+  geom_step() +
+  geom_vline(xintercept = mean_val, color = "red", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = median_val, color = "black", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = mode_val, color = "purple", linetype = "dashed", size = 1) +
+  labs(
+    title = paste0("Poisson(", lambda, ") CDF with Mean, Median, and Mode"),
+    x = "k", y = "P(Y ≤ k)"
+  ) +
+  annotate("text", x = mean_val, y = 0.1, label = "Mean", color = "red", vjust = -1) +
+  annotate("text", x = median_val, y = 0.3, label = "Median", color = "black", vjust = -1) +
+  annotate("text", x = mode_val[1], y = 0.5, label = "Mode", color = "purple", vjust = -1)
+
+# Display plots
+print(pmf_plot)
+print(cdf_plot)
+```

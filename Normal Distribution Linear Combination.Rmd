@@ -1,0 +1,60 @@
+---
+title: "Linear Combination of Independent Normals"
+author: "Anthony Morciglio"
+date: "10/01/2025"
+output: html_document
+---
+
+```{r setup, message=FALSE, warning=FALSE}
+library(ggplot2)
+
+set.seed(123)   # for reproducibility
+
+# Parameters
+mu1 <- 0.08    # mean of Y1
+sd1 <- 0.04    # stdev of Y1
+mu2 <- 0.05    # mean of Y2
+sd2 <- 0.03    # stdev of Y2
+
+a <- 0.6       # weight for Y1
+b <- 0.4       # weight for Y2
+
+n <- 100000    # number of simulations
+
+# Simulate independent normals
+Y1 <- rnorm(n, mean = mu1, sd = sd1)
+Y2 <- rnorm(n, mean = mu2, sd = sd2)
+
+# Linear combination
+W <- a*Y1 + b*Y2
+
+# Theoretical mean and sd
+theo_mean <- a*mu1 + b*mu2
+theo_sd   <- sqrt((a^2)*sd1^2 + (b^2)*sd2^2)
+
+# Empirical mean and sd
+emp_mean <- mean(W)
+emp_sd   <- sd(W)
+
+cat("Theoretical mean:", round(theo_mean,4), "\n")
+cat("Empirical mean:", round(emp_mean,4), "\n")
+cat("Theoretical SD:", round(theo_sd,4), "\n")
+cat("Empirical SD:", round(emp_sd,4), "\n")
+
+# Create data frame for plotting
+df <- data.frame(W = W)
+
+# Histogram with theoretical density overlay
+ggplot(df, aes(x=W)) +
+  geom_histogram(aes(y=..density..),
+                 bins = 50, fill="skyblue", color="white", alpha=0.6) +
+  stat_function(fun = dnorm,
+                args = list(mean=theo_mean, sd=theo_sd),
+                color="black", size=1.2) +
+  labs(title="Distribution of Portfolio Return (Linear Combination of Normals)",
+       subtitle=paste0("W = 0.6Y1 + 0.4Y2,  Theoretical N(",
+                       round(theo_mean,3), ", ", round(theo_sd,3), "^2)"),
+       x="W (Portfolio Return)", y="Density") +
+  theme_minimal(base_size=14)
+
+```

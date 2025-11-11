@@ -1,0 +1,103 @@
+---
+title: "Measures of Central Tendency for the Weibull Distribution"
+author: "Anthony Morciglio"
+date: "11/11/2025"
+output: html_document
+---
+
+---
+
+### 🧠 **Exploring Central Tendencies of the Weibull Distribution**
+
+- **Weibull Parameters:** The shape and scale parameters define the distribution’s skewness and spread.
+- **Measures of Central Tendency:**  
+  - **Mean** and **Variance** use Gamma function relations.  
+  - **Median** is derived from the inverse CDF (at 0.5).  
+  - **Mode** exists only for shape > 1.
+- **Visualization:**  
+  - The shaded regions show **±1, ±2, ±3 standard deviations** from the mean.  
+  - Vertical lines mark the **mean (blue)**, **median (green)**, and **mode (purple)**.  
+  - The AUC shading helps visualize the probability concentration around the mean.
+
+---
+
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# ----------------------------------------------------------
+# Description:
+# This R code illustrates the measures of central tendency
+# (mean, median, and mode) for a Weibull distribution and
+# shows the area under the curve (AUC) for regions around
+# the mean within a few standard deviations.
+#
+# It uses ggplot2 for visualization, and demonstrates:
+# - How to compute the mean, median, and mode.
+# - How to shade ±1, ±2, and ±3 standard deviation intervals.
+# - How the Weibull distribution shape changes with parameters.
+# ----------------------------------------------------------
+
+# Load required packages
+library(ggplot2)
+library(dplyr)
+
+# Define Weibull parameters (shape and scale)
+shape <- 2
+scale <- 5
+
+# Compute measures of central tendency
+mean_wb <- scale * gamma(1 + 1/shape)
+median_wb <- scale * (log(2))^(1/shape)
+mode_wb <- if (shape > 1) scale * ((shape - 1)/shape)^(1/shape) else NA
+
+# Compute variance and standard deviation
+var_wb <- scale^2 * (gamma(1 + 2/shape) - (gamma(1 + 1/shape))^2)
+sd_wb <- sqrt(var_wb)
+
+# Create sequence for x values
+x <- seq(0, 20, length.out = 1000)
+pdf_vals <- dweibull(x, shape = shape, scale = scale)
+
+# Create data frame for ggplot
+df <- data.frame(x = x, pdf = pdf_vals)
+
+# Define regions around the mean (±1, ±2, ±3 std)
+region_data <- df %>%
+  mutate(region = case_when(
+    x >= mean_wb - sd_wb & x <= mean_wb + sd_wb ~ "±1 SD",
+    x >= mean_wb - 2*sd_wb & x <= mean_wb + 2*sd_wb ~ "±2 SD",
+    x >= mean_wb - 3*sd_wb & x <= mean_wb + 3*sd_wb ~ "±3 SD",
+    TRUE ~ "Outside"
+  ))
+
+# Plot PDF with shaded AUC regions and central tendency markers
+ggplot(region_data, aes(x, pdf)) +
+  geom_area(data = subset(region_data, region == "±3 SD"), aes(fill = region), alpha = 0.2) +
+  geom_area(data = subset(region_data, region == "±2 SD"), aes(fill = region), alpha = 0.3) +
+  geom_area(data = subset(region_data, region == "±1 SD"), aes(fill = region), alpha = 0.4) +
+  geom_line(color = "steelblue", size = 1.2) +
+  geom_vline(xintercept = mean_wb, color = "blue", linetype = "solid", size = 1.1) +
+  geom_vline(xintercept = median_wb, color = "darkgreen", linetype = "dashed", size = 1.1) +
+  geom_vline(xintercept = mode_wb, color = "purple", linetype = "dotted", size = 1.1) +
+  annotate("text", x = mean_wb, y = max(df$pdf)*0.9, label = "Mean", color = "blue", hjust = -0.2) +
+  annotate("text", x = median_wb, y = max(df$pdf)*0.8, label = "Median", color = "darkgreen", hjust = -0.2) +
+  annotate("text", x = mode_wb, y = max(df$pdf)*0.7, label = "Mode", color = "purple", hjust = -0.2) +
+  scale_fill_manual(values = c("±1 SD" = "lightblue", "±2 SD" = "skyblue", "±3 SD" = "lightsteelblue")) +
+  labs(
+    title = "Weibull Distribution with Measures of Central Tendency",
+    subtitle = paste0("Shape = ", shape, ", Scale = ", scale),
+    x = "x",
+    y = "Probability Density",
+    fill = "Region"
+  ) +
+  theme_minimal(base_size = 14)
+
+# Print summary of results
+cat("Summary of Weibull Distribution Measures:\n")
+cat(paste("Mean   =", round(mean_wb, 3), "\n"))
+cat(paste("Median =", round(median_wb, 3), "\n"))
+cat(paste("Mode   =", round(mode_wb, 3), "\n"))
+cat(paste("SD     =", round(sd_wb, 3), "\n"))
+```
+
+
+

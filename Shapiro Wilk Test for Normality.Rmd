@@ -1,0 +1,78 @@
+---
+title: "Shapiro–Wilk Test for Normality in R"
+author: "Anthony Morciglio"
+date: "11/07/2025"
+output: html_document
+---
+
+## The Shapiro Wilk Test for Normality (Limited Samples)
+
+This section demonstrates the **Shapiro–Wilk Test for Normality** using R.  
+We will generate two datasets:
+- One from a **normal distribution**
+- One from a **skewed exponential distribution**
+
+We then:
+1. Perform the **Shapiro–Wilk test** on each dataset.  
+2. Visualize the data using **histograms** and **Q–Q plots**.  
+3. Interpret the test results and visual diagnostics.
+
+The Shapiro–Wilk test checks whether the data are consistent with a normal distribution, using:
+
+\[
+H_0: \text{Data are normally distributed}
+\]
+\[
+H_1: \text{Data are not normally distributed}
+\]
+
+If the *p-value* < 0.05, we reject \(H_0\) and conclude that the data are **not normally distributed**.
+
+---
+
+## R Code: Normality Testing and Visualization
+
+The following code block:
+- Generates normally distributed and exponential data samples,
+- Applies the **Shapiro–Wilk test** to each,
+- Produces **histograms** and **Q–Q plots** for visual inspection.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Set seed for reproducibility
+set.seed(123)
+
+# Generate normally distributed data
+normal_data <- rnorm(50, mean = 10, sd = 2)
+
+# Generate skewed (non-normal) exponential data
+skewed_data <- rexp(50, rate = 0.5)
+
+# Perform Shapiro–Wilk tests
+shapiro_normal <- shapiro.test(normal_data)
+shapiro_skewed <- shapiro.test(skewed_data)
+
+# Display results
+cat("Shapiro–Wilk Test Results:\n")
+cat("Normal Data: W =", round(shapiro_normal$statistic, 4), 
+    ", p-value =", round(shapiro_normal$p.value, 4), "\n")
+cat("Skewed Data: W =", round(shapiro_skewed$statistic, 4), 
+    ", p-value =", round(shapiro_skewed$p.value, 4), "\n\n")
+
+# Plot layout: 2 rows x 2 columns
+par(mfrow = c(2, 2))
+
+# Plot histogram and Q-Q plot for normal data
+hist(normal_data, breaks = 10, col = "blue",
+     main = "Histogram: Normal Data", xlab = "Values", border = "white")
+qqnorm(normal_data, main = "Q-Q Plot: Normal Data")
+qqline(normal_data, col = "red", lwd = 2)
+
+# Plot histogram and Q-Q plot for skewed data
+hist(skewed_data, breaks = 10, col = "blue",
+     main = "Histogram: Skewed Data", xlab = "Values", border = "white")
+qqnorm(skewed_data, main = "Q-Q Plot: Skewed Data")
+qqline(skewed_data, col = "red", lwd = 2)
+
+# Reset plot layout
+par(mfrow = c(1, 1))
+```

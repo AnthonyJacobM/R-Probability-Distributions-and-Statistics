@@ -1,0 +1,122 @@
+---
+title: "NFL RB's Barber vs Barkley"
+author: "Anthony Morciglio"
+date: "2024-06-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is a short study to evaluate the question: who is a better NFL Running Back: Saquon Barkley or Tiki Barber?  The data was collected from [ESPN Tiki Stats](https://www.espn.com/nfl/player/stats/_/id/1218/tiki-barber), [ESPN Saquon Stats](https://www.espn.com/nfl/player/stats/_/id/3929630/saquon-barkley), and exported and formatted in Excel.  
+
+Throughout this document, we will qualitatively evaluate who is the "better" Running Back (RB) by comparing their numbers throughout their career while not taking into account the offensive line that creates the space for the RB and different coaching staff whom may have different coaching strategies.
+
+Saquon Barkley was drafted in 2018 with the 2nd overall (1st round) pick by the New York Giants (NYG) while Tiki Barber was drafted in 1997 with the 36th overall (2nd round) pick by NYG.
+
+A brief history of Saquon Barkley's injury history:
+
+* High Ankle Sprain (Week 2, 2020 Season): This injury came early in the 2020 season and forced him to miss the rest of the year. It was a significant setback after a promising rookie season.
+
+* Torn ACL (Week 2, 2020 Season): This more significant injury occurred in the same game as the high ankle sprain, effectively ending his 2020 season. An ACL tear typically requires significant recovery time.
+
+* Low-Ankle Injury (Week 5, 2021 Season): This minor injury caused him to miss a few games in the 2021 season.
+
+* Other Minor Injuries: Barkley has also dealt with other minor injuries throughout his career, such as a hamstring strain and a stinger.
+
+* High Ankle Sprain (Week 2, 2023 Season): This recent injury, while not as severe as the 2020 ACL tear, has caused him to miss some games in the 2023 season.
+
+These injuries have impacted Barkley's ability to replicate the success in his rookie season (outperforming Tiki), although it is still early in Saquon's career [Sports Illustrated 2022 Projections](https://www.si.com/nfl/player/saquon-barkley) and [Injury History](https://www.draftsharks.com/fantasy/injury-history/saquon-barkley/9994).  Similar to Saquon, Tiki Barber has sustained a PCL injury in 1998 [Youtube](https://www.youtube.com/watch?v=-1-Gb5gnczk&ab_channel=JAGPhysicalTherapy). These preliminary remarks were found using [Google Gemini](https://gemini.google.com/app/be125c55a7b4cb91).
+
+
+
+```{r Rookie Season Comparison, echo = FALSE}
+library(dplyr)
+library(tidyverse)
+library(readr)
+library(tidyr)
+library(ggplot2)
+library(flextable)
+library(corrplot)
+library(skimr)
+library(viridis)
+library(readxl)
+library(reshape2)
+
+options(warn = -1)
+
+# Load the csv file
+file <- "C:/Users/Anthony Morciglio/OneDrive/NFL RB Analysis Saquon vs Tiki.csv"
+df <- read_csv(file)
+
+# Modify the df
+df_player <- df %>% group_by(Player) %>% summarise()
+df_rookie <- filter(df, df$`Season Number` == 1)
+
+# Make observations about the data
+glimpse(df_rookie) %>% flextable()
+
+df_rookie_lng <- melt(df_rookie, id.vars = 'Player', variable.name = 'Vars') 
+
+## -- Rushing -- ##
+ggplot(df_rookie, aes(Player, `Yds-Rush`, fill = Player)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  labs(x = "Player", y = "Yards Rushed", title = "Total Yards Rushed (Rookie)") + 
+  scale_fill_manual(values = c("red", "blue")) + 
+    theme_linedraw(base_size = 14)
+
+ggplot(df_rookie, aes(Player, df_rookie$`TD-Rush`, fill = Player)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  labs(x = "Player", y = "Rushing Touchdowns", title = "Total Rushing TDs (Rookie)") + 
+  scale_fill_manual(values = c("red", "blue")) + 
+    theme_linedraw(base_size = 14) 
+
+ggplot(df_rookie, aes(Player, df_rookie$YPR, fill = Player)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  labs(x = "Player", y = "Yards Per Carry", title = "Avg Yards Per Carry (Rookie)") + 
+  scale_fill_manual(values = c("red", "blue")) + 
+    theme_linedraw(base_size = 14) 
+
+ggplot(df_rookie, aes(Player, df_rookie$`FD-Rush-Per`*100, fill = Player)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  labs(x = "Player", y = "First Down %", title = "Percentage of Runs as 1st Downs (Rookie)") + 
+  scale_fill_manual(values = c("red", "blue")) + 
+    theme_linedraw(base_size = 14) 
+
+
+## -- Receiving -- ##
+ggplot(df_rookie, aes(Player, df_rookie$`Yds-Rec`, fill = Player)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  labs(x = "Player", y = "Yards Received", title = "Total Receiving Yards (Rookie)") + 
+  scale_fill_manual(values = c("red", "blue")) + 
+    theme_linedraw(base_size = 14)
+
+ggplot(df_rookie, aes(Player, df_rookie$`TD-Rec`, fill = Player)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  labs(x = "Player", y = "Receiving Touchdowns", title = "Total Receiving TDs (Rookie)") + 
+  scale_fill_manual(values = c("red", "blue")) + 
+    theme_linedraw(base_size = 14) 
+
+ggplot(df_rookie, aes(Player, df_rookie$YPR, fill = Player)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  labs(x = "Player", y = "Yards Per Reception", title = "Avg Yards Per Reception (Rookie)") + 
+  scale_fill_manual(values = c("red", "blue")) + 
+    theme_linedraw(base_size = 14) 
+
+
+```
+
+## Rookie Season Summary
+We observe Saquon Barkely had a greater number of rushing yards (1,307) in 2018 compared to Tiki Barber (511), although it should be noted that Saquon got about twice as many carries (261) as Tiki (136) in their rookie year - this would change towards the end of Tiki's career as he racked up more than 300 carries in his last 3 seasons (2004 - 2006).  Barkley also had more than 3 times as many rushing touchdowns (11) compared to Barber (3) and Saquon was a more reliable receiver coming out of the backfield with more than 700 receiving yards (impressive for a running back let alone a rookie).  The one category that Tiki was better at was his conversion percentage of rushes that led to first downs (23%) compared to Saquon (19%).  Overall, Saquon had greater long distance potential (rushing long of 78) compared to Tiki (42).
+One thing to note is that Tiki tore his PCL in his rookie year, missed 4 games and slowed down his momentum in his first year as an NFL RB [NY Daily News](https://www.nydailynews.com/1997/09/29/knee-kos-tiki-2-3-weeks/).  
+
+
+```{r First 6 Seasons, echo=FALSE}
+glimpse(df) %>% flextable()
+
+```
+
+

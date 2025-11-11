@@ -1,0 +1,86 @@
+---
+title: "Geometric Distribution - Method of Moments"
+author: "Anthony Morciglio"
+date: "09/05/2025"
+output: html_document
+---
+
+## Using the Method of Moments to determine the Measures of Central Tendency for Geometrically Distributed Empirical Data
+
+This blog post introduces the Geometric Distribution, which models the number of Bernoulli trials until the first success, and derives its key statistics: the Expected Value (Mean) E[X] = 1/p, the Median m = \ln(0.5)/\ln(1-p), and the Mode, which is always 1 since the first trial is the most likely outcome. The post explains the intuition behind these results, shows how the distribution becomes heavily skewed for small values of p, and contrasts the behavior of the mean and median. The accompanying R code generates a visualization of the Expected Value and Median as functions of p, using ggplot2 to plot both curves on the same graph. The results show that as p approaches 1, both statistics converge to 1 (success almost always occurs immediately), while for small p, the Expected Value grows rapidly like 1/p while the Median increases more moderately, reflecting the skewness of the distribution. Together, the blog and code provide both a mathematical derivation and a graphical interpretation that clarify how the mean and median behave under different probabilities.
+
+
+```{r setup, warning = FALSE, message = FALSE}
+# Load libraries
+library(ggplot2)
+library(dplyr)
+
+# ----------------------
+# Example dataset
+# ----------------------
+data <- c(1, 2, 1, 4, 3)
+n <- length(data)
+sample_mean <- mean(data)
+
+# Method of Moments estimate for p
+p_hat <- 1 / sample_mean
+
+# Theoretical parameters
+mean_est   <- 1 / p_hat
+var_est    <- (1 - p_hat) / (p_hat^2)
+sd_est     <- sqrt(var_est)
+median_est <- ceiling(log(0.5) / log(1 - p_hat))
+mode_est   <- 1  # For Geometric(p), mode is always 1
+
+# ----------------------
+# Prepare distributions
+# ----------------------
+k_vals <- 1:max(data, ceiling(mean_est + 4*sd_est))
+
+# Fitted theoretical pmf
+theoretical_pmf <- dgeom(k_vals - 1, prob = p_hat)
+
+# Sample empirical frequencies
+empirical_freq <- table(factor(data, levels = k_vals)) / n
+
+df <- data.frame(
+  k = k_vals,
+  Theoretical = theoretical_pmf,
+  Empirical   = as.numeric(empirical_freq)
+)
+
+# ----------------------
+# Plot
+# ----------------------
+ggplot(df, aes(x = k)) +
+  # Empirical bars
+  geom_col(aes(y = Empirical, fill = "Empirical"), alpha = 0.6, width = 0.4) +
+  # Theoretical points and line
+  geom_line(aes(y = Theoretical, color = "Theoretical"), linewidth = 1) +
+  geom_point(aes(y = Theoretical, color = "Theoretical"), size = 2) +
+  # Shade ±1 SD region
+  geom_rect(
+    xmin = mean_est - sd_est,
+    xmax = mean_est + sd_est,
+    ymin = 0, ymax = Inf,
+    alpha = 0.01, fill = "blue"
+  ) +
+  # Vertical lines: mean, median, mode
+  geom_vline(xintercept = mean_est, color = "blue", linetype = "dashed", linewidth = 1) +
+  geom_vline(xintercept = median_est, color = "red", linetype = "dashed", linewidth = 1) +
+  geom_vline(xintercept = mode_est, color = "purple", linetype = "dashed", linewidth = 1) +
+  # Labels
+  labs(
+    title = "Geometric Distribution Fit (Method of Moments)",
+    subtitle = paste("p̂ =", round(p_hat, 3), 
+                     "| Mean =", round(mean_est, 2),
+                     "| Median =", median_est,
+                     "| Mode =", mode_est),
+    x = "k (Number of Trials until Success)",
+    y = "Probability / Frequency"
+  ) +
+  scale_fill_manual(name = "Data", values = c("Empirical" = "orange")) +
+  scale_color_manual(name = "Distribution", values = c("Theoretical" = "black")) +
+  theme_minimal(base_size = 14)
+```
+

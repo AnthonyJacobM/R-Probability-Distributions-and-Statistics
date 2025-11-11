@@ -1,0 +1,81 @@
+---
+title: "Confidence Interval of Population Variance Chi Square Distribution"
+author: "Anthony Morciglio"
+date: "10/27/2025"
+output: html_document
+---
+
+### Confidence Interval for Population Variance using the Chi-Square Distribution
+
+In this example, we use R to demonstrate how to compute and visualize a **confidence interval for the population variance** when the data are assumed to come from a **normal distribution**.  
+
+We start with a known sample variance \( s^2 = 2.25 \) obtained from a sample of size \( n = 12 \).  
+The goal is to calculate the **95% confidence interval** for the population variance \( \sigma^2 \) using the Chi-Square distribution with \( n - 1 = 11 \) degrees of freedom.  
+
+The formula for the confidence interval is:
+
+\[
+\text{CI for } \sigma^2 = 
+\left(
+\frac{(n - 1)s^2}{\chi^2_{\alpha/2, n-1}},
+\frac{(n - 1)s^2}{\chi^2_{1-\alpha/2, n-1}}
+\right)
+\]
+
+We will:
+1. Compute the confidence interval numerically.  
+2. Plot the Chi-Square density function with shaded regions showing the critical values and interval boundaries.  
+3. Interpret the results visually and numerically.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# --- Parameters ---
+n <- 12                     # sample size
+s2 <- 2.25                  # sample variance
+alpha <- 0.05               # significance level
+df <- n - 1                 # degrees of freedom
+
+# --- Critical values from Chi-Square distribution ---
+chi_lower <- qchisq(1 - alpha/2, df)
+chi_upper <- qchisq(alpha/2, df)
+
+# --- Confidence Interval for Population Variance ---
+lower_var <- (df * s2) / chi_lower
+upper_var <- (df * s2) / chi_upper
+
+# --- Confidence Interval for Population Standard Deviation ---
+lower_sd <- sqrt(lower_var)
+upper_sd <- sqrt(upper_var)
+
+# --- Print Results ---
+cat("95% Confidence Interval for σ²:", round(lower_var, 2), "to", round(upper_var, 2), "\n")
+cat("95% Confidence Interval for σ :", round(lower_sd, 2), "to", round(upper_sd, 2), "\n")
+
+# --- Visualization ---
+x <- seq(0, 30, length.out = 1000)
+y <- dchisq(x, df)
+
+plot(x, y, type = "l", lwd = 2, col = "blue",
+     main = expression(paste("Chi-Square(", df, ") Distribution with 95% CI")),
+     xlab = expression(chi^2), ylab = "Density")
+
+# Shade critical regions
+polygon(c(x[x >= chi_lower], chi_lower, max(x)), 
+        c(y[x >= chi_lower], 0, 0), 
+        col = rgb(1, 0, 0, 0.3), border = NA)
+
+polygon(c(x[x <= chi_upper], chi_upper, min(x)), 
+        c(y[x <= chi_upper], 0, 0), 
+        col = rgb(1, 0, 0, 0.3), border = NA)
+
+# Add reference lines
+abline(v = c(chi_lower, chi_upper), col = "red", lty = 2)
+text(chi_lower, max(y)/5, labels = expression(chi[0.975]^2), pos = 4, col = "red")
+text(chi_upper, max(y)/5, labels = expression(chi[0.025]^2), pos = 2, col = "red")
+
+# Add title for confidence interval
+mtext(sprintf("95%% CI for σ²: [%.2f, %.2f]", lower_var, upper_var),
+      side = 3, line = 0.5, col = "darkgreen")
+
+
+```
+

@@ -1,0 +1,143 @@
+---
+title: "Exponential Distribution: Turkey Plot"
+author: "Anthony Morciglio"
+date: "2025-08-23"
+output: html_document
+---
+
+## Visualizing the Density Plot and the Box and Whisker Plot of the Exponential Distribution
+
+The R code you're referring to is a script that simulates data from an exponential distribution and then visualizes it using a **Tukey plot** built with the `ggplot2` library. The script first generates a dataset and calculates key statistical measures such as the **median**, **quartiles ($Q_1$ and $Q_3$)**, the **interquartile range (IQR)**, and the **Tukey upper fence ($Q_3 + 1.5 \times \text{IQR}$) for identifying anomalies**. It then creates a combined plot, featuring the distribution's probability density function (PDF) along with an annotated boxplot placed above it. This allows for a clear, visual representation of how the statistical summaries align with the overall shape of the distribution, highlighting the IQR and the potential anomaly range.
+
+
+```{r setup}
+# This R script generates a Tukey plot for the exponential distribution.
+# It uses ggplot2 to combine a probability density function (PDF)
+# with an annotated boxplot to visualize key statistical measures.
+
+# Load necessary libraries.
+# If you don't have them installed, run:
+# install.packages(c("ggplot2", "dplyr"))
+library(ggplot2)
+library(dplyr)
+
+# --- 1. Set Parameters and Simulate Data ---
+# Set a random seed for reproducibility.
+set.seed(42)
+
+# Define the rate parameter (lambda) for the exponential distribution.
+# The mean of the distribution is 1/lambda.
+lambda <- 1.5
+
+# Define the number of random variates to simulate.
+n <- 1000
+
+# Simulate exponentially distributed random numbers using the quantile function.
+# This demonstrates the inverse transform sampling method.
+# We first generate uniform random numbers from 0 to 1, and then
+# transform them using the qexp() function.
+uniform_random_numbers <- runif(n)
+exponential_data <- qexp(uniform_random_numbers, rate = lambda)
+
+# --- 2. Calculate Key Statistics ---
+# Calculate the quartiles and median using the quantile() function.
+q1 <- quantile(exponential_data, 0.25)
+median_val <- quantile(exponential_data, 0.50)
+q3 <- quantile(exponential_data, 0.75)
+
+# Calculate the mean of the simulated data.
+mean_val <- mean(exponential_data)
+
+# Calculate the interquartile range (IQR).
+iqr_val <- q3 - q1
+
+# Calculate the Tukey upper fence for outlier detection.
+# Outliers are values greater than Q3 + 1.5 * IQR.
+tukey_upper_fence <- q3 + 1.5 * iqr_val
+
+# --- 3. Create Dataframes for Plotting ---
+# Create a data frame for the PDF curve.
+# We generate a sequence of x-values and their corresponding density values.
+pdf_df <- data.frame(
+  x = seq(0, max(exponential_data) + 1, length.out = 500),
+  y = dexp(seq(0, max(exponential_data) + 1, length.out = 500), rate = lambda)
+)
+
+# --- 4. Generate the Tukey Plot with ggplot2 ---
+# Define a y-offset for the boxplot to place it above the PDF.
+boxplot_y_offset <- 0.8
+
+# Create the plot
+tukey_plot <- ggplot(data = pdf_df, aes(x = x, y = y)) +
+  # --- Add shaded areas to the plot ---
+  # Shade the interquartile range (IQR).
+  geom_area(data = subset(pdf_df, x >= q1 & x <= q3),
+            aes(x = x, y = y), fill = "#A8C6F1", alpha = 0.8) +
+  # Shade the outlier region (past the Tukey upper fence).
+  geom_area(data = subset(pdf_df, x >= tukey_upper_fence),
+            aes(x = x, y = y), fill = "#F7A8A8", alpha = 0.8) +
+  # Add the PDF line.
+  geom_line(color = "black", linewidth = 1.2) +
+  
+  # --- Add vertical lines from the x-axis to the PDF ---
+  # Vertical line for the median (Q2).
+  geom_vline(xintercept = median_val, color = "#2D88FF",
+             linetype = "solid", linewidth = 1.2, alpha = 0.8) +
+  # Vertical line for the mean.
+  geom_vline(xintercept = mean_val, color = "#F03C3C",
+             linetype = "dashed", linewidth = 1.2, alpha = 0.8) +
+  # Vertical lines for Q1 and Q3.
+  geom_vline(xintercept = c(q1, q3), color = "#56657F",
+             linetype = "dotted", linewidth = 1.2, alpha = 0.8) +
+  
+  # --- Add the boxplot and its components above the PDF ---
+  # Box (representing the IQR).
+  geom_rect(aes(xmin = q1, xmax = q3, ymin = boxplot_y_offset,
+                ymax = boxplot_y_offset + 0.02),
+            fill = "#A8C6F1", color = "black") +
+  # Median line on the box.
+  geom_segment(aes(x = median_val, xend = median_val, y = boxplot_y_offset,
+                   yend = boxplot_y_offset + 0.02),
+               color = "#2D88FF", linewidth = 1.5) +
+  # Whiskers
+  geom_segment(aes(x = 0, xend = q1, y = boxplot_y_offset + 0.01,
+                   yend = boxplot_y_offset + 0.01)) +
+  geom_segment(aes(x = q3, xend = tukey_upper_fence, y = boxplot_y_offset + 0.01,
+                   yend = boxplot_y_offset + 0.01)) +
+  
+  # --- Add annotations for key statistics ---
+  annotate("text", x = q1 - 0.1, y = boxplot_y_offset - 0.03, label = "Q1",
+           hjust = 0.5, vjust = 0, size = 4) +
+  annotate("text", x = median_val - 0.05, y = boxplot_y_offset + 0.03, label = "Median (Q2)",
+           hjust = 0.5, vjust = 0, size = 4, color = "#2D88FF") +
+  annotate("text", x = q3 + 0.1, y = boxplot_y_offset + 0.03, label = "Q3",
+           hjust = 0.5, vjust = 0, size = 4) +
+  annotate("text", x = mean_val + 0.135, y = boxplot_y_offset + 0.075, label = "Mean",
+           hjust = 0.5, vjust = 0, size = 4, color = "#F03C3C") +
+  annotate("text", x = (q1 + q3) / 2, y = boxplot_y_offset + 0.16, label = "IQR Range",
+           hjust = 0.5, vjust = 0, size = 4, color = "black") +
+  annotate("text", x = tukey_upper_fence, y = boxplot_y_offset + 0.03, label = "Anomaly Range",
+           hjust = 0.5, vjust = 0, size = 4, color = "#F7A8A8") +
+  
+  # --- Add labels and formatting ---
+  labs(
+    title = "Tukey Plot for the Exponential Distribution",
+    subtitle = paste0("Rate Parameter (\u03bb) = ", lambda, ", Sample Size = ", n),
+    x = "Value (x)",
+    y = "Probability Density"
+  ) +
+  # Set the y-axis limits to accommodate the new boxplot and annotations
+  coord_cartesian(ylim = c(0, boxplot_y_offset + 0.1)) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5),
+    axis.title = element_text(size = 12),
+    axis.text = element_text(size = 10)
+  )
+
+# Print the final plot.
+print(tukey_plot)
+```
+
+

@@ -1,0 +1,77 @@
+---
+title: "Transformations of the Quadratic Equation"
+author: "Anthony Morciglio"
+date: "11/09/2025"
+output: html_document
+---
+
+## Visualizing Function Transformations
+
+In this R script, we visualize the transformations of the quadratic function  
+\\( f(x) = x^2 \\).  
+
+We demonstrate:
+**Vertical and horizontal contractions**  
+
+Each transformation is shown on the same plot for comparison.  
+By observing these transformations, we can understand how parameters affect the graph’s shape and position.
+
+```{r transformations, echo=TRUE, message=FALSE, warning=FALSE}
+# Load required library
+library(ggplot2)
+
+# Define the base function
+f <- function(x) x^2
+
+# Create a sequence of x values
+x <- seq(-5, 5, length.out = 400)
+
+# Compute transformations
+data <- data.frame(
+  x = x,
+  base = f(x),
+  vertical_contraction = 0.5 * f(x), # contract vertically
+  horizontal_contraction = f(2 * x) # contract horizontally
+)
+
+# Reshape data for plotting
+library(tidyr)
+data_long <- pivot_longer(
+  data,
+  cols = -x,
+  names_to = "transformation",
+  values_to = "y"
+)
+
+# Assign custom labels for clarity
+labels <- c(
+  base = "Base",
+  vertical_contraction = "Vertical Contraction (×0.5)",
+  horizontal_contraction = "Horizontal Contraction (×0.5)"
+)
+
+# Plot all transformations
+ggplot(data_long, aes(x = x, y = y, color = transformation)) +
+  geom_line(size = 1.2) +
+  scale_color_manual(values = c(
+    "base" = "black",
+    "vertical_contraction" = "orange",
+    "horizontal_contraction" = "gold"
+  ),
+  labels = labels
+  ) +
+  labs(
+    title = "Transformations of the Function y = x²",
+    subtitle = "Demonstrating Shifts, Stretches, and Contractions",
+    x = "x",
+    y = "y",
+    color = "Transformation"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    legend.position = "bottom",
+    legend.box = "vertical",
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+```

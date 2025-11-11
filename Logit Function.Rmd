@@ -1,0 +1,43 @@
+---
+title: "Logit Function"
+author: "Anthony Morciglio"
+date: "10/30/2025"
+output: html_document
+---
+
+### Illustrating the Logit Function
+
+The following R code defines and visualizes the **Logit Function**, which transforms probabilities \( p \in (0,1) \) into real-valued log-odds.  
+The plot shows how small probabilities map to large negative values and probabilities near 1 map to large positive values.  
+Reference lines are included at \( p = 0.5 \) (where the logit equals 0) and \( \text{logit}(p) = 0 \) to emphasize symmetry.
+
+```{r logit-plot, echo=TRUE, message=FALSE, warning=FALSE}
+# Define the logit function
+logit <- function(p) {
+  log(p / (1 - p))
+}
+
+# Create a sequence of probabilities between 0 and 1 (excluding boundaries)
+p <- seq(0.001, 0.999, length.out = 300)
+
+# Compute logit values
+logit_values <- logit(p)
+
+# Plot the logit function
+plot(p, logit_values, type = "l", lwd = 2, col = "blue",
+     main = "The Logit Function: logit(p) = ln(p / (1 - p))",
+     xlab = "Probability (p)",
+     ylab = "Logit (log-odds)")
+
+# Add reference lines for symmetry
+abline(h = 0, lty = 2, col = "black")   # logit = 0
+abline(v = 0.5, lty = 2, col = "black") # p = 0.5
+
+# Annotate key points
+text(0.5, 0.5, labels = "logit(0.5) = 0", pos = 4, cex = 0.9)
+text(0.1, -2, labels = "Low p → large negative logit", pos = 4, col = "red", cex = 0.9)
+text(0.9, 2, labels = "High p → large positive logit", pos = 2, col = "darkgreen", cex = 0.9)
+
+# Add grid lines for clarity
+grid();
+```

@@ -1,0 +1,86 @@
+---
+title: "Exploring the Measures of Central Tendency and Variance of the Student's t-Distribution"
+author: "Anthony Morciglio"
+date: "10/11/2025"
+output: html_document
+---
+
+# Student T Distribution 
+In this exploration, we will evaluate the Student T distribution. 
+Specifically, we will explore the measures of central tendency (mean, median, and mode), which we find to be 0, and the variance.  The Student T distribution is similar to the Normal Distribution, but is used for low sample sizes and heavier tails.
+
+```{r setup, warning = FALSE, message = FALSE}
+library(ggplot2)
+library(dplyr)
+
+# PDF of the Student's t-distribution
+t_pdf <- function(y, nu) {
+  gamma((nu + 1) / 2) / (sqrt(nu * pi) * gamma(nu / 2)) * (1 + (y^2 / nu))^(-(nu + 1) / 2)
+}
+
+# Plot densities for various degrees of freedom
+df <- data.frame(
+  y = rep(seq(-5, 5, length.out = 400), 4),
+  nu = factor(rep(c(1, 2, 5, 30), each = 400))
+)
+df$fy <- mapply(function(y, nu) t_pdf(y, nu), df$y, as.numeric(as.character(df$nu)))
+
+ggplot(df, aes(x = y, y = fy, color = as.numeric(as.character(nu)))) +
+  geom_line(linewidth = 1.2) +
+  scale_color_gradient(low = "red", high = "blue",
+                       name = expression(nu),
+                       guide = guide_colorbar(barwidth = 8, barheight = 0.5)) +
+  labs(title = "Student's t-Distribution Densities for Various Degrees of Freedom",
+       subtitle = "Color gradient: red = small ν (heavy tails), blue = large ν (normal-like)",
+       x = "Y", y = "Density") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+
+df_var <- data.frame(
+  nu = seq(2.1, 50, by = 0.1),
+  var = sapply(seq(2.1, 50, by = 0.1), function(nu) nu / (nu - 2))
+)
+
+ggplot(df_var, aes(x = nu, y = var)) +
+  geom_line(color = "blue", linewidth = 1.2) +
+  labs(title = "Theoretical Variance of the Student's t-Distribution",
+       subtitle = "Variance diverges as ν → 2⁺",
+       x = "Degrees of Freedom (ν)",
+       y = "Variance") +
+  theme_minimal()
+
+plot_examples <- function(nu) {
+  y <- rt(10000, df = nu)
+  df <- data.frame(y)
+  ggplot(df, aes(x = y)) +
+    geom_histogram(aes(y = after_stat(density)), bins = 60, fill = "blue", alpha = 0.5) +
+    stat_function(fun = dt, args = list(df = nu), color = "darkgreen", linewidth = 1) +
+    labs(title = paste0("Simulated vs. Theoretical Density (ν = ", nu, ")"),
+         x = "Y", y = "Density") +
+    theme_minimal()
+}
+
+plot_examples(5)
+plot_examples(4)
+
+set.seed(42)
+nu_vals <- c(1, 2, 5, 30)
+samples <- lapply(nu_vals, function(nu) data.frame(Y = rt(5000, df = nu), nu = nu))
+df_box <- bind_rows(samples)
+
+ggplot(df_box, aes(x = factor(nu), y = Y, fill = nu)) +
+  geom_boxplot(outlier.color = "black", alpha = 0.7) +
+  scale_fill_gradient(low = "red", high = "blue",
+                      name = expression(nu),
+                      guide = guide_colorbar(barwidth = 8, barheight = 0.5)) +
+  labs(title = "Boxplots of Samples from Student's t-Distributions",
+       subtitle = "Color gradient: red = heavy tails, blue = normal-like",
+       x = "Degrees of Freedom (ν)",
+       y = "Sample Values") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+
+```
+

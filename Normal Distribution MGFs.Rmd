@@ -1,0 +1,48 @@
+---
+title: "Monte Carlo Verification of the Normal Distribution MGF"
+author: "Anthony Morciglio"
+date: "10/01/2025"
+output: html_document
+---
+
+```{r gamma-function-demo, echo=TRUE, message=FALSE, warning=FALSE}
+library(ggplot2)
+set.seed(123)
+
+# Parameters of the Normal
+mu <- 1.0
+sigma <- 2.0
+n <- 1e6    # number of simulations
+
+# Simulate Y ~ Normal(mu, sigma^2)
+Y <- rnorm(n, mean = mu, sd = sigma)
+
+# Define t values
+t_vals <- seq(-1, 1, length.out = 11)
+
+# Monte Carlo estimates
+mc_est <- sapply(t_vals, function(t) mean(exp(t*Y)))
+
+# Theoretical MGF
+theo_mgf <- exp(mu * t_vals + 0.5 * sigma^2 * t_vals^2)
+
+# Combine results
+results <- data.frame(
+  t = t_vals,
+  MonteCarlo = mc_est,
+  Theoretical = theo_mgf
+)
+
+results
+
+ggplot(results, aes(x = t)) +
+  geom_point(aes(y = MonteCarlo, color = "Monte Carlo"), size = 3) +
+  geom_line(aes(y = Theoretical, color = "Theoretical"), size = 1.2) +
+  scale_color_manual(values = c("Monte Carlo"="blue", "Theoretical"="red")) +
+  labs(title="Monte Carlo Verification of the Normal MGF",
+       x="t",
+       y="M_Y(t)",
+       color="Legend") +
+  theme_minimal(base_size = 14)
+
+```

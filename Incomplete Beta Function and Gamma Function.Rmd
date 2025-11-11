@@ -1,0 +1,71 @@
+---
+title: "Incomplete Beta Function and Gamma Function"
+author: "Anthony Morciglio"
+date: "10/24/2025"
+output: html_document
+---
+
+## Demonstrating the Connection Between the Incomplete Beta and Gamma Functions
+
+In this section, we illustrate numerically how the **Incomplete Beta Function** \( B_x(a,b) \) relates to the **Gamma Function** via the identity:
+
+\[
+B_x(a,b) = \frac{\Gamma(a)\Gamma(b)}{\Gamma(a+b)} \, I_x(a,b)
+\]
+
+where \( I_x(a,b) \) is the **regularized incomplete Beta function** (available as `pbeta(x, a, b)` in R).
+
+The code below performs the following steps:
+
+1. Selects parameters \( a \), \( b \), and a value \( x \in [0,1] \).  
+2. Computes the **incomplete Beta** using the built-in R function `pbeta()` multiplied by the complete Beta (computed via `beta(a,b)` or `gamma()` functions).  
+3. Computes the same incomplete Beta numerically using direct integration of the integrand \( t^{a-1}(1-t)^{b-1} \).  
+4. Compares both results to confirm numerical equivalence.  
+5. Finally, visualizes the incomplete Beta function \( B_x(a,b) \) as a function of \( x \) along with the corresponding regularized version \( I_x(a,b) \).
+
+---
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Parameters
+a <- 2.5
+b <- 3.2
+x <- 0.6
+
+# 1. Complete Beta via Gamma functions
+B_complete_gamma <- gamma(a) * gamma(b) / gamma(a + b)
+
+# 2. Regularized incomplete Beta I_x(a,b)
+I_x <- pbeta(x, a, b)
+
+# 3. Compute incomplete Beta via the identity
+B_incomplete_identity <- B_complete_gamma * I_x
+
+# 4. Compute incomplete Beta directly by integration
+f <- function(t) t^(a - 1) * (1 - t)^(b - 1)
+B_incomplete_integral <- integrate(f, lower = 0, upper = x)$value
+
+# Display comparison
+data.frame(
+  Method = c("Gamma Identity", "Numerical Integration"),
+  Bx_Value = c(B_incomplete_identity, B_incomplete_integral)
+)
+
+# 5. Visualize B_x(a,b) and I_x(a,b)
+x_seq <- seq(0, 1, length.out = 200)
+B_incomplete <- sapply(x_seq, function(z) B_complete_gamma * pbeta(z, a, b))
+I_incomplete <- pbeta(x_seq, a, b)
+
+# Plot
+par(mfrow = c(1, 2))
+plot(x_seq, B_incomplete, type = "l", col = "blue", lwd = 2,
+     ylab = expression(B[x](a,b)), xlab = "x",
+     main = "Incomplete Beta Function")
+abline(v = x, col = "red", lty = 2)
+points(x, B_incomplete_identity, pch = 19, col = "red")
+
+plot(x_seq, I_incomplete, type = "l", col = "skyblue", lwd = 2,
+     ylab = expression(I[x](a,b)), xlab = "x",
+     main = "Regularized Incomplete Beta")
+abline(v = x, col = "red", lty = 2)
+points(x, I_x, pch = 19, col = "red")
+```

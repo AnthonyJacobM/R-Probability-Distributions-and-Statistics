@@ -1,0 +1,122 @@
+---
+title: "Chi-Square Distribution: PDF and CDF Visualization"
+author: "Anthony Morciglio"
+date: "10/13/2025"
+output: html_document
+---
+
+# Visualizing the Chi-Square Distribution
+The **Chi-square distribution** (\( \chi^2_k \)) is one of the most important distributions in statistics.  
+It commonly arises when summing the squares of \(k\) independent standard normal random variables:
+
+\[
+Y = Z_1^2 + Z_2^2 + \dots + Z_k^2, \quad \text{where } Z_i \sim N(0,1)
+\]
+
+The parameter \(k\) is called the **degrees of freedom**.  
+This distribution is frequently used in:
+- **Goodness-of-fit tests** (e.g., the Chi-square test)
+- **Testing independence** in contingency tables
+- **Estimating variance** in a normal model
+
+The **shape** of the Chi-square distribution depends strongly on the degrees of freedom:
+- For small \(k\), it is **skewed right**.
+- As \(k\) increases, it becomes **more symmetric**, approaching the normal distribution.
+
+---
+
+## Probability Density Function (PDF)
+
+The **PDF** of the Chi-square distribution with \(k\) degrees of freedom is:
+
+\[
+f_Y(y; k) = \frac{1}{2^{k/2} \Gamma(k/2)} y^{(k/2) - 1} e^{-y/2}, \quad y > 0
+\]
+
+Here, \( \Gamma(\cdot) \) is the Gamma function.
+
+The **mean**, **variance**, **mode**, and **median** of \(Y\) are:
+
+\[
+\text{Mean} = k, \quad
+\text{Variance} = 2k, \quad
+\text{Mode} = k - 2 \text{ (for } k \ge 2 \text{)}, \quad
+\text{Median} \approx k \left(1 - \frac{2}{9k}\right)^3
+\]
+
+## Cumulative Distribution Function (CDF)
+
+The **CDF** represents the probability that \(Y\) is less than or equal to some value \(y\):
+
+\[
+F_Y(y; k) = P(Y \le y) = \frac{\gamma(k/2, y/2)}{\Gamma(k/2)}
+\]
+
+where \( \gamma \) is the **lower incomplete gamma function**.  
+It can also be computed numerically in R with `pchisq()`.
+
+## The R Code
+
+The R code below demonstrates:
+1. How to **compute and plot** the PDF and CDF of the Chi-square distribution.  
+2. How to **annotate the mean, median, and mode** directly on the PDF.  
+3. How to create **clean, publication-ready graphics** using `ggplot2`.
+
+```{r setup, include=TRUE}
+# Load required library
+library(ggplot2)
+library(dplyr)
+
+# Degrees of freedom
+k <- 6
+
+# Define range of x values
+x <- seq(0, 30, length.out = 400)
+
+# Compute PDF and CDF values
+pdf_vals <- dchisq(x, df = k)
+cdf_vals <- pchisq(x, df = k)
+
+# Compute statistical measures
+mean_val   <- k
+median_val <- qchisq(0.5, df = k)
+mode_val   <- ifelse(k >= 2, k - 2, NA)
+
+# Create data frame for plotting
+df <- data.frame(x, pdf_vals, cdf_vals)
+
+# --- Plot 1: PDF (Density Function) ---
+pdf_plot <- ggplot(df, aes(x, pdf_vals)) +
+  geom_line(color = "#1565C0", linewidth = 1.2) +
+  geom_area(fill = "#BBDEFB", alpha = 0.5) +
+  geom_vline(aes(xintercept = mean_val), color = "#43A047", linetype = "dashed", linewidth = 1) +
+  geom_vline(aes(xintercept = median_val), color = "#FBC02D", linetype = "dashed", linewidth = 1) +
+  geom_vline(aes(xintercept = mode_val), color = "#E53935", linetype = "dashed", linewidth = 1) +
+  annotate("text", x = mean_val, y = 0.05, label = paste0("Mean = ", round(mean_val, 2)),
+           color = "#43A047", hjust = -0.1, size = 4) +
+  annotate("text", x = median_val, y = 0.04, label = paste0("Median = ", round(median_val, 2)),
+           color = "#FBC02D", hjust = -0.1, size = 4) +
+  annotate("text", x = mode_val, y = 0.03, label = paste0("Mode = ", round(mode_val, 2)),
+           color = "#E53935", hjust = -0.1, size = 4) +
+  labs(
+    title = paste0("Chi-Square (PDF) with k = ", k, " Degrees of Freedom"),
+    x = "x",
+    y = "Density"
+  ) +
+  theme_minimal(base_size = 14)
+
+# --- Plot 2: CDF (Distribution Function) ---
+cdf_plot <- ggplot(df, aes(x, cdf_vals)) +
+  geom_line(color = "#8E24AA", linewidth = 1.2) +
+  geom_area(fill = "#E1BEE7", alpha = 0.5) +
+  labs(
+    title = paste0("Chi-Square (CDF) with k = ", k, " Degrees of Freedom"),
+    x = "x",
+    y = "Cumulative Probability"
+  ) +
+  theme_minimal(base_size = 14)
+
+# Display both plots
+pdf_plot
+cdf_plot
+```

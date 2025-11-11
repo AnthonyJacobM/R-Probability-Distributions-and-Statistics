@@ -1,0 +1,132 @@
+---
+title: "Binomial Distribution - Mode"
+author: "Anthony Morciglio"
+date: "2025-08-28"
+output: html_document
+---
+
+## Deriving the Mode from a Discrete Probability Distribution by Taking the Proportion of Consecutive Probabilities
+
+The R script you have is a comprehensive tool for exploring the concept of the mode in a binomial distribution.
+
+The first plot visually demonstrates the proportion of consecutive probabilities. The red dashed horizontal line at y = 1 is a key feature, serving as a horizontal asymptote. It separates the regions where the probability is increasing from where it's decreasing. When the blue bars are greater than 1, the PMF is monotonically increasing, meaning each successive probability is larger than the previous one. The point where the bars cross this y = 1 threshold (from above to below) is where the mode is located at k = 8.
+
+The second plot, for the PMF, directly shows the results of this behavior. The distribution's probability bars increase up to a peak and then decrease. The blue dot precisely highlights the mode, which is the value of k with the highest probability.
+
+Finally, the third plot for the CDF visualizes the cumulative probability. The CDF is a step function that always increases or stays constant. The blue dot here marks the cumulative probability at the mode, providing a reference point on the overall distribution.
+
+```{r setup, warning = FALSE, message = FALSE}
+# --- Required Libraries ---
+# Install these packages if you haven't already
+# install.packages("ggplot2")
+# install.packages("dplyr")
+
+# Load the required libraries for plotting and data manipulation
+library(ggplot2)
+library(dplyr)
+
+# --- Parameters for the Binomial Distribution ---
+#
+# n: The number of independent trials.
+# p: The probability of success in each trial.
+#
+n <- 20
+p <- 0.4
+
+# --- Derivation-related Functions ---
+
+# Function to calculate the ratio of consecutive probabilities
+# R(k) = f(k+1, n, p) / f(k, n, p) = (n-k)p / ((k+1)(1-p))
+calculate_ratio <- function(k, n, p) {
+  if (k < 0 || k >= n) {
+    stop("k must be an integer between 0 and n-1.")
+  }
+  ratio <- ((n - k) * p) / ((k + 1) * (1 - p))
+  return(ratio)
+}
+
+# Find the theoretical mode M
+# The mode is floor((n+1)p)
+mode_k <- floor((n + 1) * p)
+cat("The theoretical mode is k = ", mode_k, "\n")
+
+# --- Plot 1: The Probability Ratio Expression ---
+# This plot shows where the probability is increasing or decreasing.
+# The mode is where the ratio crosses from >= 1 to < 1.
+#
+k_values <- 0:(n - 1)
+ratio_data <- data.frame(
+  k = k_values,
+  ratio = sapply(k_values, function(k) calculate_ratio(k, n, p))
+)
+
+ggplot(ratio_data, aes(x = k, y = ratio)) +
+  geom_bar(stat = "identity", fill = "#3b82f6", alpha = 0.7, width = 0.5) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "#ef4444", size = 1) +
+  geom_point(aes(color = ratio >= 1), size = 4) +
+  scale_color_manual(values = c("#f97316", "#16a34a")) +
+  labs(
+    title = "Ratio of Consecutive Probabilities",
+    subtitle = "R(k) >= 1 means P(k+1) is greater than P(k)",
+    x = "k (Number of Successes)",
+    y = "P(X=k+1) / P(X=k)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5),
+    legend.position = "none"
+  )
+
+# --- Plot 2: PMF with Mode Highlighted ---
+# This plot shows the classic binomial PMF with the highest probability point marked.
+#
+pmf_data <- data.frame(
+  k = 0:n,
+  probability = dbinom(x = 0:n, size = n, prob = p)
+)
+
+ggplot(pmf_data, aes(x = k, y = probability)) +
+  geom_bar(stat = "identity", fill = "#a3e635", alpha = 0.7, width = 0.5) +
+  # Highlight the mode with a blue dot
+  geom_point(data = filter(pmf_data, k == mode_k), color = "#3b82f6", size = 5) +
+  labs(
+    title = paste("Binomial PMF (n = ", n, ", p = ", p, ")"),
+    subtitle = "The Mode is Highlighted with a Blue Dot",
+    x = "Number of Successes (k)",
+    y = "Probability"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+# --- Plot 3: CDF with Mode Highlighted ---
+# This plot shows the cumulative probabilities with the mode value marked.
+# The mode is not the peak of the CDF, but it's a key value in the distribution.
+#
+cdf_data <- data.frame(
+  k = 0:n,
+  cumulative_probability = pbinom(q = 0:n, size = n, prob = p)
+)
+
+ggplot(cdf_data, aes(x = k, y = cumulative_probability)) +
+  geom_step(size = 1.2, color = "#a3e635") +
+  geom_point(size = 3, color = "#a3e635") +
+  # Highlight the mode with a blue dot
+  geom_point(data = filter(cdf_data, k == mode_k), color = "#3b82f6", size = 5) +
+  labs(
+    title = paste("Binomial CDF (n = ", n, ", p = ", p, ")"),
+    subtitle = "The Mode's Value is Highlighted with a Blue Dot",
+    x = "Number of Successes (k)",
+    y = "Cumulative Probability"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
+
+```
+

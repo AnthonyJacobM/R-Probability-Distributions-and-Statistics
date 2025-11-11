@@ -1,0 +1,172 @@
+---
+title: "Poisson Distribution: Sum of Distributions"
+author: "Anthony Morciglio"
+date: "09/09/2025"
+output: html_document
+---
+
+## Visualizing the Sum of Independent Poisson Distributions
+
+The provided R script demonstrates a key property of Poisson distributions: the sum of two independent Poisson random variables is also a Poisson random variable.
+
+The code does this by first defining two independent Poisson distributions with rate parameters, or λ values, of $\lambda_1 = 3$ and $\lambda_2 = 5$. It then calculates and plots the Probability Mass Function (PMF) and the Cumulative Distribution Function (CDF) for each of these individual distributions, as well as for their sum.
+
+The resulting plots visually confirm that the summed distribution is a Poisson distribution with a new rate parameter of $\lambda = 8$, which is the sum of the individual rates (3 + 5). The plots also include vertical lines to highlight the average of each distribution, further illustrating the relationship.
+
+```{r setup, warning = FALSE, message = FALSE}
+# This script demonstrates that the sum of two independent Poisson random variables
+# is also a Poisson random variable, with a rate parameter equal to the sum
+# of the individual rate parameters.
+
+# Load the necessary library for plotting
+# The 'tidyverse' package is a good choice for this as it includes ggplot2.
+# If you don't have it installed, run: install.packages("tidyverse")
+library(tidyverse)
+
+# --- 1. Define the Parameters ---
+
+# Let's set the rate parameters for our two independent Poisson distributions.
+# We'll use lambda_1 = 3 and lambda_2 = 5 for this example.
+lambda1 <- 3
+lambda2 <- 5
+
+# The rate parameter for the sum of the two distributions will be the sum
+# of the individual rate parameters.
+lambda_sum <- lambda1 + lambda2
+
+# Define the range of k (number of events) to plot.
+# We choose a range that extends well beyond the expected values to show
+# the full shape of the distributions.
+k_values <- 0:20
+
+
+# --- 2. Calculate the PMFs ---
+
+# The PMF of a Poisson distribution is given by:
+# P(X=k) = (e^(-lambda) * lambda^k) / k!
+
+# Calculate the PMF for the first Poisson distribution, X1.
+pmf1 <- dpois(k_values, lambda = lambda1)
+
+# Calculate the PMF for the second Poisson distribution, X2.
+pmf2 <- dpois(k_values, lambda = lambda2)
+
+# Calculate the PMF for the sum, X_sum = X1 + X2.
+# This should follow a Poisson distribution with the sum of the rates.
+pmf_sum <- dpois(k_values, lambda = lambda_sum)
+
+
+# --- 3. Create a Data Frame for Plotting ---
+
+# We'll combine all the PMF data into a single data frame for easy plotting
+# with ggplot2.
+df_pmf <- tibble(
+  k = k_values,
+  pmf1 = pmf1,
+  pmf2 = pmf2,
+  pmf_sum = pmf_sum
+)
+
+
+# --- 4. Plot the PMFs ---
+
+# Reshape the data for plotting with ggplot2, which works best with a
+# "long" data format.
+df_pmf_long <- df_pmf %>%
+  pivot_longer(
+    cols = c(pmf1, pmf2, pmf_sum),
+    names_to = "distribution",
+    values_to = "probability"
+  )
+
+# Define a color palette for the plots.
+color_palette <- c("pmf1" = "#1f78b4", "pmf2" = "#a6cee3", "pmf_sum" = "#33a02c")
+legend_labels <- c(
+  "pmf1" = "Poisson(λ=3)",
+  "pmf2" = "Poisson(λ=5)",
+  "pmf_sum" = "Sum: Poisson(λ=8)"
+)
+
+# Plot the PMFs
+pmf_plot <- ggplot(df_pmf_long, aes(x = k, y = probability, fill = distribution)) +
+  geom_bar(stat = "identity", position = "dodge", alpha = 0.7) +
+  labs(
+    title = "PMFs of Two Poisson Distributions and Their Sum",
+    x = "Number of Events (k)",
+    y = "Probability P(X=k)",
+    fill = "Distribution"
+  ) +
+  scale_fill_manual(values = color_palette, labels = legend_labels) +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(min(k_values), max(k_values), by = 1)) +
+  # Add vertical lines for mean and median
+  geom_vline(xintercept = lambda1, linetype = "dashed", color = color_palette["pmf1"], linewidth = 1) +
+  geom_vline(xintercept = median(df_pmf$pmf1), linetype = "dotted", color = color_palette["pmf1"], linewidth = 1) +
+  geom_vline(xintercept = lambda2, linetype = "dashed", color = color_palette["pmf2"], linewidth = 1) +
+  geom_vline(xintercept = median(df_pmf$pmf2), linetype = "dotted", color = color_palette["pmf2"], linewidth = 1) +
+  geom_vline(xintercept = lambda_sum, linetype = "dashed", color = color_palette["pmf_sum"], linewidth = 1) +
+  geom_vline(xintercept = median(df_pmf$pmf_sum), linetype = "dotted", color = color_palette["pmf_sum"], linewidth = 1)
+
+
+# --- 5. Calculate the CDFs ---
+
+# The CDF of a Poisson distribution is the cumulative probability,
+# i.e., P(X <= k) = sum(P(X=i)) for i=0 to k.
+# R's ppois() function calculates this for us.
+
+# Calculate the CDF for the first Poisson distribution, X1.
+cdf1 <- ppois(k_values, lambda = lambda1)
+
+# Calculate the CDF for the second Poisson distribution, X2.
+cdf2 <- ppois(k_values, lambda = lambda2)
+
+# Calculate the CDF for the sum, X_sum = X1 + X2.
+# This should also follow a Poisson distribution.
+cdf_sum <- ppois(k_values, lambda = lambda_sum)
+
+
+# --- 6. Create a Data Frame for Plotting the CDFs ---
+
+df_cdf <- tibble(
+  k = k_values,
+  cdf1 = cdf1,
+  cdf2 = cdf2,
+  cdf_sum = cdf_sum
+)
+
+# Reshape the data for plotting with ggplot2
+df_cdf_long <- df_cdf %>%
+  pivot_longer(
+    cols = c(cdf1, cdf2, cdf_sum),
+    names_to = "distribution",
+    values_to = "probability"
+  )
+
+
+# --- 7. Plot the CDFs ---
+
+cdf_plot <- ggplot(df_cdf_long, aes(x = k, y = probability, color = distribution, fill = distribution)) +
+  geom_line(linewidth = 1.5) +
+  geom_point(size = 3) +
+  labs(
+    title = "CDFs of Two Poisson Distributions and Their Sum",
+    x = "Number of Events (k)",
+    y = "Cumulative Probability P(X≤k)",
+    color = "Distribution"
+  ) +
+  scale_color_manual(values = color_palette, labels = legend_labels) +
+  scale_fill_manual(values = color_palette, labels = legend_labels) +
+  theme_minimal() +
+  scale_x_continuous(breaks = seq(min(k_values), max(k_values), by = 1)) +
+  theme(legend.position = "bottom") +
+  # Add vertical lines for mean and median
+  geom_vline(xintercept = lambda1, linetype = "dashed", color = color_palette["pmf1"], linewidth = 1) +
+  geom_vline(xintercept = lambda2, linetype = "dashed", color = color_palette["pmf2"], linewidth = 1) +
+  geom_vline(xintercept = lambda_sum, linetype = "dashed", color = color_palette["pmf_sum"], linewidth = 1) 
+
+# --- 8. Display the plots ---
+
+# Print the plots to the R console or graphics device
+print(pmf_plot)
+print(cdf_plot)
+```

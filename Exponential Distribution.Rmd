@@ -1,0 +1,81 @@
+---
+title: "Exponential Distribution"
+author: "Anthony Morciglio"
+date: "2025-08-21"
+output: html_document
+---
+
+```{r setup, warning = FALSE, message = FALSE, echo = FALSE}
+```
+
+## The Exponential Distribution: An Experiment
+
+In this experiment, we will consider a collection of 40 observed times until default for cassettes of bicycles.  We will assume the 40 observed times follow an exponential distribution with Mean Time Until Failure of 5000 miles (estimated from experimental data) and hence, the rate parameter is $\lambda = 1/5000$.  We can display the density function on the graph to see how likely at a given point on the x-axis (miles driven), the likelihood of the cassette to default.  What is more useful is the probability that the cassette will default after a certain amount of miles has traversed (the 75th percentile is obtained at 6931 miles, that is 75% of bicycle cassettes will default at the 6931st mile).  Results are obtained using ggplot2 and the common statistical functions in R:
+
+```{r setup, include=FALSE, warning = FALSE, message = FALSE, echo = FALSE
+knitr::opts_chunk$set(echo = FALSE)
+}
+```
+
+```{r}
+
+# Load the necessary library for plotting
+library(ggplot2)
+
+# Set the rate parameter (lambda). For this example, 1/5000 failures per mile.
+lambda <- 1/5000
+
+# ----- PDF Plot (same as before) -----
+# Create a data frame for the exponential distribution PDF
+pdf_df <- data.frame(x = seq(0, 20000, by = 100))
+pdf_df$y <- dexp(pdf_df$x, rate = lambda)
+
+# Create a sample of 100 random failure times
+set.seed(42)
+sample_failures <- rexp(100, rate = lambda)
+
+# Plot the PDF and the sample data
+pdf_plot <- ggplot(pdf_df, aes(x, y)) +
+  geom_line(color = "blue", size = 1.2) +
+  geom_point(data = data.frame(x = sample_failures, y = 0), aes(x = x, y = y), color = "red", alpha = 0.6, size = 3) +
+  labs(title = "Probability Density Function (PDF)",
+       subtitle = paste("Exponential Distribution (λ =", format(lambda, scientific = FALSE), ")"),
+       x = "Miles Traversed",
+       y = "Probability Density") +
+  theme_minimal()
+
+print(pdf_plot)
+
+# ----- CDF Plot and 75th Percentile Calculation -----
+# Create a data frame for the exponential distribution CDF
+cdf_df <- data.frame(x = seq(0, 20000, by = 100))
+cdf_df$y <- pexp(cdf_df$x, rate = lambda)
+
+# Calculate the 75th percentile of time to failure
+# The qexp() function is the inverse of pexp() and gives the quantile.
+percentile_75 <- qexp(0.75, rate = lambda)
+
+# Plot the CDF
+cdf_plot <- ggplot(cdf_df, aes(x, y)) +
+  geom_line(color = "darkgreen", size = 1.2) +
+  # Add a vertical line for the 75th percentile
+  geom_vline(xintercept = percentile_75, linetype = "dashed", color = "red", size = 1) +
+  # Add a horizontal line for the 75th percentile
+  geom_hline(yintercept = 0.75, linetype = "dashed", color = "red", size = 1) +
+  # Add a label for the 75th percentile
+  geom_label(aes(x = percentile_75, y = 0.75, label = paste0("75th Percentile: ", round(percentile_75, 2), " miles")),
+             nudge_x = 2000, nudge_y = -0.1, color = "black", fill = "white") +
+  labs(title = "Cumulative Distribution Function (CDF)",
+       subtitle = paste("Exponential Distribution (λ =", format(lambda, scientific = FALSE), ")"),
+       x = "Miles Traversed",
+       y = "Cumulative Probability") +
+  theme_minimal()
+
+cdf_plot
+
+# Print the exact calculated value for the percentile
+cat("\n\n")
+cat("The 75th percentile (miles until 75% of cassettes fail) is:", round(percentile_75, 2), "miles\n")
+```
+
+

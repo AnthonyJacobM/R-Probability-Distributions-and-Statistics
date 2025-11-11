@@ -1,0 +1,67 @@
+---
+title: "Student's t Distribution: Small Sample Inference of the Mean"
+author: "Anthony Morciglio"
+date: "10/24/2025"
+output: html_document
+---
+
+## Computing the T-Statistic
+
+In this section, we will demonstrate how to perform a *small sample inference for the mean* using the **Student’s t-distribution**.  
+When the population standard deviation is unknown and the sample size is small (typically \( n < 30 \)), we use the *t-distribution* instead of the *normal distribution* to construct confidence intervals and perform hypothesis testing.  
+
+We will consider an example where we have a small sample of data representing the lifetimes (in hours) of light bulbs produced by a factory.  
+The goal is to determine whether the mean lifetime differs from the manufacturer’s claimed mean of 1000 hours.  
+We will compute:
+- The **sample mean** and **sample standard deviation**.  
+- The **t-statistic** and **degrees of freedom**.  
+- The **p-value** and the **confidence interval** for the mean.  
+Finally, we visualize the **t-distribution** with the calculated statistic.
+
+---
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Set up the sample data
+light_bulb_hours <- c(980, 995, 1005, 1020, 990, 1010, 1002, 1008, 995, 1003)
+
+# Known hypothesized mean (manufacturer's claim)
+mu0 <- 1000
+
+# Sample size, mean, and standard deviation
+n <- length(light_bulb_hours)
+xbar <- mean(light_bulb_hours)
+s <- sd(light_bulb_hours)
+
+# Compute t-statistic
+t_stat <- (xbar - mu0) / (s / sqrt(n))
+df <- n - 1
+
+# Compute p-value for a two-tailed test
+p_value <- 2 * (1 - pt(abs(t_stat), df))
+
+# Compute 95% confidence interval for the mean
+alpha <- 0.05
+t_crit <- qt(1 - alpha/2, df)
+margin_error <- t_crit * (s / sqrt(n))
+ci_lower <- xbar - margin_error
+ci_upper <- xbar + margin_error
+
+# Display results
+cat("Sample Mean:", round(xbar, 2), "\n")
+cat("Sample SD:", round(s, 2), "\n")
+cat("t-Statistic:", round(t_stat, 3), "\n")
+cat("Degrees of Freedom:", df, "\n")
+cat("p-value:", round(p_value, 4), "\n")
+cat("95% Confidence Interval: [", round(ci_lower, 2), ",", round(ci_upper, 2), "]\n")
+
+# Visualization of t-distribution and test statistic
+curve(dt(x, df), from = -4, to = 4, col = "blue", lwd = 2,
+      main = "t-Distribution with Test Statistic",
+      ylab = "Density", xlab = "t-value")
+
+# Add vertical lines for critical and observed t-values
+abline(v = c(-t_crit, t_crit), col = "red", lty = 2)
+abline(v = t_stat, col = "darkgreen", lwd = 2)
+legend("topright", legend = c("t PDF", "Critical t", "Observed t"),
+       col = c("blue", "red", "darkgreen"), lwd = c(2, 1, 2), lty = c(1, 2, 1))
+```

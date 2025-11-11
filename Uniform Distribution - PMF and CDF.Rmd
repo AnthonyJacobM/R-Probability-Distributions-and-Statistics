@@ -1,0 +1,98 @@
+---
+title: "Uniform Distribution - PMF and CDF"
+author: "Anthony Morciglio"
+date: "2025-08-29"
+output: html_document
+---
+
+## A Simple Discrete Probability Distribution - Uniform Distribution
+  The R code provides a concise summary of the Discrete Uniform Distribution, 
+directly referencing the example of a fair six-sided die from the blog post. 
+The script explicitly defines the parameters of the example—the `outcomes` 
+from 1 to 6 and the total number of outcomes, `N`. 
+It then demonstrates how to calculate the Probability Mass Function (PMF)
+for a single outcome (e.g., rolling a 4) by using the formula $1/N$. 
+Following this, the code calculates the Cumulative Distribution Function (CDF), 
+showcasing how to find the probability of a range of outcomes 
+(e.g., rolling a 3 or less) using the formula $(k - a + 1) / N$. 
+By printing the calculations and their results, the code serves as a practical 
+companion to the theoretical concepts outlined in the blog post.  
+
+```{r setup, warning = FALSE, message = FALSE}
+# This R script summarizes the key concepts from the "Discrete Uniform Distribution" blog post.
+# It demonstrates the calculation of the Probability Mass Function (PMF) and
+# the Cumulative Distribution Function (CDF) using the example of a fair six-sided die.
+
+# Install and load the 'ggplot2' package if not already installed
+if (!requireNamespace("ggplot2", quietly = TRUE)) {
+  install.packages("ggplot2")
+}
+library(ggplot2)
+
+# --- Parameters of the Example ---
+# A fair six-sided die has outcomes from 1 to 6.
+outcomes <- c(1, 2, 3, 4, 5, 6)
+N <- length(outcomes) # Total number of possible outcomes
+
+cat("Parameters of the Discrete Uniform Distribution:\n")
+cat(paste("Possible Outcomes:", toString(outcomes), "\n"))
+cat(paste("Total Number of Outcomes (N):", N, "\n\n"))
+
+# --- 1. Probability Mass Function (PMF) ---
+# The PMF gives the probability of a single, specific outcome.
+# For a discrete uniform distribution, this is 1/N.
+
+# Example: Probability of rolling a 4 (k=4)
+k_pmf <- 4
+pmf_result <- 1 / N
+
+cat("--- Probability Mass Function (PMF) ---\n")
+cat(paste("Calculation: P(X = ", k_pmf, ") = 1 / N\n", sep=""))
+cat(paste("Result: P(X = ", k_pmf, ") = ", round(pmf_result, 4), "\n\n", sep=""))
+
+# Plotting the PMF
+pmf_data <- data.frame(k = outcomes, probability = rep(1/N, N))
+pmf_plot <- ggplot(pmf_data, aes(x = k, y = probability)) +
+  geom_bar(stat = "identity", fill = "#3B82F6", color = "#1D4ED8", width = 0.5) +
+  geom_text(aes(label = round(probability, 3)), vjust = -0.5, size = 4) +
+  labs(title = "Discrete Uniform Distribution PMF",
+       x = "Outcome (k)",
+       y = "Probability P(X = k)") +
+  theme_minimal() +
+  scale_x_continuous(breaks = outcomes) +
+  ylim(0, 0.2) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+print(pmf_plot)
+cat("\n\n")
+
+# --- 2. Cumulative Distribution Function (CDF) ---
+# The CDF gives the probability of an outcome being less than or equal to k.
+# For a discrete uniform distribution, this is (k - a + 1) / N, where 'a' is the
+# lowest possible outcome.
+
+# Example: Probability of rolling a number less than or equal to 3 (k=3)
+k_cdf <- 3
+a <- min(outcomes) # The lowest possible outcome
+cdf_result <- (k_cdf - a + 1) / N
+
+cat("--- Cumulative Distribution Function (CDF) ---\n")
+cat(paste("Calculation: P(X <= ", k_cdf, ") = (k - a + 1) / N\n", sep=""))
+cat(paste("Result: P(X <= ", k_cdf, ") = ", round(cdf_result, 4), "\n\n", sep=""))
+
+# Plotting the CDF
+cdf_data <- data.frame(k = outcomes, cumulative_probability = (outcomes - a + 1) / N)
+cdf_plot <- ggplot(cdf_data, aes(x = k, y = cumulative_probability)) +
+  geom_step(direction = "hv", size = 1, color = "#1E40AF") +
+  geom_point(size = 3, color = "red") +
+  geom_text(aes(label = round(cumulative_probability, 2)), vjust = -1, size = 4) +
+  labs(title = "Discrete Uniform Distribution CDF",
+       x = "Outcome (k)",
+       y = "Cumulative Probability F(k)") +
+  theme_minimal() +
+  scale_x_continuous(breaks = outcomes) +
+  ylim(0, 1.1) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+print(cdf_plot)
+```

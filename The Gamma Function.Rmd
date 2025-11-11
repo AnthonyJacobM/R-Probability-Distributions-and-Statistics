@@ -1,0 +1,66 @@
+---
+title: "Properties of the Gamma Function"
+author: "Anthony Morciglio"
+date: "10/06/2025"
+output: html_document
+---
+
+# Properties of the Gamma Function
+
+The Gamma Function is defined as:
+
+$$ \Gamma(z) = \int_0^\infty t^{z-1} e^{-t} \, dt, \quad \Re(z) > 0 $$
+
+It extends the factorial function such that:
+
+$$ \Gamma(n) = (n-1)! $$
+
+and satisfies the recursive property:
+
+$$ \Gamma(z+1) = z \, \Gamma(z). $$
+
+---
+
+```{r gamma-function-demo, echo=TRUE, message=FALSE, warning=FALSE}
+# Load libraries
+library(ggplot2)
+
+# 1. Evaluate Gamma function at some points
+z_vals <- c(0.5, 1, 2, 3, 3.5, 5)
+gamma_vals <- gamma(z_vals)
+
+results <- data.frame(z = z_vals,
+                      Gamma_z = gamma_vals,
+                      Check = c(sqrt(pi), 1, 1, 2, NA, 24))
+
+results
+
+# 2. Verify the recursive property Γ(z+1) = zΓ(z)
+z_test <- 2.5
+lhs <- gamma(z_test + 1)
+rhs <- z_test * gamma(z_test)
+
+cat("Check recursive property for z =", z_test, "\n")
+cat("Γ(z+1) =", lhs, " | z*Γ(z) =", rhs, "\n")
+
+# 3. Plot the Gamma function
+x <- seq(0.1, 5, length.out = 200)
+y <- gamma(x)
+
+df <- data.frame(x = x, y = y)
+
+# Factorial values at integers
+ints <- 1:5
+fact_points <- data.frame(x = ints, y = gamma(ints))
+
+ggplot(df, aes(x, y)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(data = fact_points, aes(x, y), color = "red", size = 3) +
+  geom_text(data = fact_points,
+            aes(x, y, label = paste0(round(y, 1))),
+            vjust = -1, color = "red") +
+  labs(title = "Gamma Function Γ(x)",
+       subtitle = "Red points = factorial values at integers",
+       x = "x",
+       y = "Γ(x)") +
+  theme_minimal(base_size = 14)

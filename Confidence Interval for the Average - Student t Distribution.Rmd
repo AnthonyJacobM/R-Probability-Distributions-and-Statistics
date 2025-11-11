@@ -1,0 +1,75 @@
+---
+title: "Confidence Interval for the Average - Student t Distribution"
+author: "Anthony Morciglio"
+date: "10/25/2025"
+output: html_document
+---
+
+## Visualizing the Confidence Interval for the Population Mean (Student's t Distribution)
+
+In this section, we illustrate how to compute and visualize a **confidence interval for the population mean** when the population standard deviation is unknown.  
+We use the **Student’s t-distribution** since it adjusts for the extra uncertainty introduced by estimating the population variance from a small sample.
+
+We will:
+1. Simulate a small sample of observations.
+2. Compute the sample mean (\(\bar{x}\)), standard deviation (\(s\)), and confidence interval (CI) using the t-critical value.
+3. Visualize the t-distribution, the sample mean, and the shaded region representing the 95% confidence interval.
+
+
+```{r confidence-interval-t, echo=TRUE, message=FALSE, warning=FALSE}
+# ------------------------------------------------------------
+# Confidence Interval Visualization using the Student's t-distribution
+# ------------------------------------------------------------
+# This code:
+# 1. Generates a small sample (n = 10)
+# 2. Computes the sample mean, SD, and 95% CI for the population mean
+# 3. Plots the t-distribution with the CI region highlighted
+# ------------------------------------------------------------
+
+# Load required libraries
+library(ggplot2)
+
+# Step 1: Create a small random sample (example data: test completion times in minutes)
+set.seed(123)
+x <- c(12, 15, 14, 16, 13, 15, 14, 17, 16, 15)
+
+# Step 2: Compute sample statistics
+n <- length(x)
+xbar <- mean(x)
+s <- sd(x)
+alpha <- 0.05
+
+# Step 3: Find t critical value for 95% CI
+t_crit <- qt(1 - alpha/2, df = n - 1)
+
+# Step 4: Compute margin of error and CI bounds
+ME <- t_crit * s / sqrt(n)
+CI_lower <- xbar - ME
+CI_upper <- xbar + ME
+
+# Step 5: Create a data frame for the t-distribution
+t_values <- seq(-4, 4, length.out = 400)
+t_density <- dt(t_values, df = n - 1)
+df_plot <- data.frame(t_values, t_density)
+
+# Step 6: Convert the observed t-statistics to standardized coordinates
+t_lower <- (CI_lower - xbar) / (s / sqrt(n))
+t_upper <- (CI_upper - xbar) / (s / sqrt(n))
+
+# Step 7: Plot
+ggplot(df_plot, aes(x = t_values, y = t_density)) +
+  geom_line(color = "#004080", size = 1.2) +
+  geom_area(data = subset(df_plot, t_values >= t_lower & t_values <= t_upper),
+            aes(x = t_values, y = t_density), fill = "skyblue", alpha = 0.5) +
+  geom_vline(xintercept = c(t_lower, t_upper), color = "darkred", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = 0, color = "black", size = 0.8) +
+  labs(
+    title = "Confidence Interval for the Mean (Student's t Distribution)",
+    subtitle = sprintf("95%% CI for μ: [%.2f, %.2f] (n = %d)", CI_lower, CI_upper, n),
+    x = "t-value",
+    y = "Density"
+  ) +
+  theme_minimal(base_size = 14)
+
+```
+

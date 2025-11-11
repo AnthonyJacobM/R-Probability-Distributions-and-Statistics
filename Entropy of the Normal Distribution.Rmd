@@ -1,0 +1,96 @@
+---
+title: "Entropy of the Normal Distribution"
+author: "Anthony Morciglio"
+date: "10/03/2025"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning = FALSE, message = FALSE, echo = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+```
+
+## Entropy of the Normal Distribution
+
+The entropy of a Normal distribution (N(\mu, \sigma^2)) is given by:
+
+[
+H(Y) = \tfrac{1}{2} \ln(2 \pi e \sigma^2).
+]
+
+This depends only on the variance, not the average
+
+### Example: Normal(0, 4)
+
+Let’s compute the entropy for (\mu = 0, \sigma^2 = 4).
+
+```{r}
+mu <- 0
+sigma <- 2
+entropy_nats <- 0.5 * log(2 * pi * exp(1) * sigma^2)
+entropy_bits <- entropy_nats / log(2)
+
+entropy_nats
+entropy_bits
+```
+
+* Entropy ≈ 2.11 nats
+* Entropy ≈ 3.04 bits
+
+### Entropy as a Function of Variance
+
+We now compute entropy for a range of (\sigma) values to see how it grows.
+
+```{r}
+sigma_vals <- seq(0.5, 5, by = 0.5)
+entropy_vals <- 0.5 * log(2 * pi * exp(1) * sigma_vals^2)
+
+df <- data.frame(sigma = sigma_vals, entropy = entropy_vals)
+
+ggplot(df, aes(x = sigma, y = entropy)) +
+  geom_line(color = "blue", size = 1.2) +
+  geom_point(color = "black", size = 2) +
+  labs(title = "Entropy of the Normal Distribution",
+       x = "Standard Deviation (σ)",
+       y = "Entropy (nats)") +
+  theme_minimal()
+```
+
+### Monte Carlo Verification
+
+We can approximate entropy numerically by simulating from the distribution and evaluating (-\mathbb{E}[\ln f(Y)]).
+
+```{r}
+set.seed(123)
+n <- 1e5
+y <- rnorm(n, mean = mu, sd = sigma)
+f_y <- dnorm(y, mean = mu, sd = sigma)
+entropy_mc <- -mean(log(f_y))
+
+entropy_mc
+```
+
+This Monte Carlo estimate should be close to the theoretical entropy.
+
+### Boxplot of Entropy Estimates
+
+If we repeat the Monte Carlo approximation several times, we can see the variability in estimates.
+
+```{r}
+mc_reps <- replicate(20, {
+  y <- rnorm(n, mean = mu, sd = sigma)
+  f_y <- dnorm(y, mean = mu, sd = sigma)
+  -mean(log(f_y))
+})
+
+boxplot(mc_reps, horizontal = TRUE,
+        main = "Monte Carlo Estimates of Entropy",
+        xlab = "Entropy (nats)",
+        col = "orange")
+abline(v = entropy_nats, col = "black", lwd = 2, lty = 2)
+```
+
+The red dashed line shows the theoretical entropy, and the Monte Carlo estimates cluster closely around it.
+
+```
+```

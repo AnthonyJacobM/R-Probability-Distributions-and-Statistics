@@ -1,0 +1,289 @@
+---
+title: "NFL RBs Barber vs Barkley"
+author: "Anthony Morciglio"
+date: "2024-06-23"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## R Markdown
+
+Saquon Barkley was drafted in 2018 with the 2nd overall (1st round) pick by the New York Giants (NYG) while Tiki Barber was drafted in 1997 with the 36th overall (2nd round) pick by NYG.  Originally, Tiki was drafted to be a third down running back while Saquon was drafted to be an all round (in-between the tackles and speed back), but we will see how Tiki developed into a pro bowler during the end of his career.
+
+[Two of the Top Running Backs in New York Giants History](https://www.google.com/url?sa=i&url=https%3A%2F%2Fnypost.com%2F2020%2F09%2F16%2Ftiki-barber-meant-no-harm-by-calling-out-giants-saquon-barkley%2F&psig=AOvVaw0EpzglbxRo8mEeI6kyJKI-&ust=1719870006856000&source=images&cd=vfe&opi=89978449&ved=0CBEQjRxqFwoTCLjnzpmlhIcDFQAAAAAdAAAAABAh)
+
+
+A brief history of Saquon Barkley's injury history:
+
+* High Ankle Sprain (Week 2, 2020 Season): This injury came early in the 2020 season and forced him to miss the rest of the year. It was a significant setback after a promising rookie season.
+
+* Torn ACL (Week 2, 2020 Season): This more significant injury occurred in the same game as the high ankle sprain, effectively ending his 2020 season. An ACL tear typically requires significant recovery time.
+
+* Low-Ankle Injury (Week 5, 2021 Season): This minor injury caused him to miss a few games in the 2021 season.
+
+* Other Minor Injuries: Barkley has also dealt with other minor injuries throughout his career, such as a hamstring strain and a stinger.
+
+* High Ankle Sprain (Week 2, 2023 Season): This recent injury, while not as severe as the 2020 ACL tear, has caused him to miss some games in the 2023 season.
+
+These injuries have impacted Barkley's ability to replicate the success in his rookie season (outperforming Tiki), although it is still early in Saquon's career [Sports Illustrated 2022 Projections](https://www.si.com/nfl/player/saquon-barkley) and [Injury History](https://www.draftsharks.com/fantasy/injury-history/saquon-barkley/9994).  Similar to Saquon, Tiki Barber has sustained a PCL injury in 1998 [Youtube](https://www.youtube.com/watch?v=-1-Gb5gnczk&ab_channel=JAGPhysicalTherapy). These preliminary remarks were found using [Google Gemini](https://gemini.google.com/app/be125c55a7b4cb91).
+
+
+
+```{r Rookie Season Comparison, echo = FALSE}
+options(warn = -1)
+
+library(dplyr)
+library(tidyverse)
+library(readr)
+library(tidyr)
+library(ggplot2)
+library(flextable)
+library(corrplot)
+library(skimr)
+library(viridis)
+library(readxl)
+library(reshape2)
+library(gridExtra)
+
+
+# Load the csv file
+file <- "C:/Users/Anthony Morciglio/OneDrive/NFL RB Analysis Saquon vs Tiki.csv"
+df <- read_csv(file)
+
+# Modify the df
+df_player <- df %>% group_by(Player) %>% summarise()
+df_rookie <- filter(df, df$`Season Number` == 1)
+
+# Make observations about the data
+glimpse(df_rookie) %>% flextable()
+
+df_rookie_lng <- melt(df_rookie, id.vars = 'Player', variable.name = 'Vars') 
+
+## -- Rushing -- ##
+p1 <- ggplot(df_rookie, aes(Player, `Yds-Rush`, fill = Player)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  labs(x = "Player", y = "Yards Rushed", title = "Total Yards Rushed (Rookie)") + 
+  scale_fill_manual(values = c("red", "blue")) + 
+    theme_linedraw(base_size = 10)
+
+p2 <- ggplot(df_rookie, aes(Player, df_rookie$`TD-Rush`, fill = Player)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  labs(x = "Player", y = "Rushing Touchdowns", title = "Total Rushing TDs (Rookie)") + 
+  scale_fill_manual(values = c("red", "blue")) + 
+    theme_linedraw(base_size = 10) 
+
+p3 <- ggplot(df_rookie, aes(Player, df_rookie$YPR, fill = Player)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  labs(x = "Player", y = "Yards Per Carry", title = "Avg Yards Per Carry (Rookie)") + 
+  scale_fill_manual(values = c("red", "blue")) + 
+    theme_linedraw(base_size = 10) 
+
+p4 <- ggplot(df_rookie, aes(Player, df_rookie$`FD-Rush-Per`*100, fill = Player)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  labs(x = "Player", y = "First Down %", title = "% of Runs as 1st Downs (Rookie)") +
+  scale_fill_manual(values = c("red", "blue")) + 
+    theme_linedraw(base_size = 10) 
+
+
+grid.arrange(p1, p2, p3, p4, nrow = 2)
+
+## -- Receiving -- ##
+p5 <- ggplot(df_rookie, aes(Player, df_rookie$`Yds-Rec`, fill = Player)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  labs(x = "Player", y = "Yards Received", title = "Total Receiving Yards (Rookie)") + 
+  scale_fill_manual(values = c("red", "blue")) + 
+    theme_linedraw(base_size = 10)
+
+p6 <- ggplot(df_rookie, aes(Player, df_rookie$`TD-Rec`, fill = Player)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  labs(x = "Player", y = "Receiving Touchdowns", title = "Total Receiving TDs (Rookie)") + 
+  scale_fill_manual(values = c("red", "blue")) + 
+    theme_linedraw(base_size = 10) 
+
+p7 <- ggplot(df_rookie, aes(Player, df_rookie$YPC, fill = Player)) + 
+  geom_bar(stat = "identity", position = "dodge") + 
+  labs(x = "Player", y = "Yards Per Reception", title = "Avg Yards Per Reception (Rookie)") + 
+  scale_fill_manual(values = c("red", "blue")) + 
+    theme_linedraw(base_size = 10) 
+
+grid.arrange(p5, p6, p7, nrow = 2)
+
+```
+
+## Rookie Season Summary
+We observe Saquon Barkely had a greater number of rushing yards (1,307) in 2018 compared to Tiki Barber (511), although it should be noted that Saquon got about twice as many carries (261) as Tiki (136) in his rookie year - this would change towards the end of Tiki's career as he racked up more than 300 carries in his last 3 seasons (2004 - 2006).  Barkley also had more than 3 times as many rushing touchdowns (11) compared to Barber (3) and Saquon was a more reliable receiver coming out of the backfield with more than 700 receiving yards (impressive for a running back let alone a rookie).  The one category that Tiki was better at was his conversion percentage of rushes that led to first downs (23%) compared to Saquon (19%).  Overall, Saquon had greater long distance potential (rushing long of 78) compared to Tiki (42).
+One thing to note is that Tiki tore his PCL in his rookie year, missed 4 games and slowed down his momentum in his first year as an NFL Running Back [NY Daily News](https://www.nydailynews.com/1997/09/29/knee-kos-tiki-2-3-weeks/).  
+
+
+```{r First 6 Seasons, echo=FALSE}
+df_6 <- filter(df, df$`Season Number` <= 6) # Filter first 6 seasons.
+df_6_sub <- df_6 %>% select('Player', 'Season', "Season Number", 'Car', 'Yds-Rush', 'YPR', 'TD-Rush', 'REC', 'Yds-Rec', 'YPC', 'TD-Rec')
+df_6_saquon <- filter(df_6, df_6$Player == 'Saquon Barkley')
+df_6_tiki <- filter(df_6, df_6$Player == 'Tiki Barber')
+glimpse(df_6) %>% flextable()
+summary(df_6_saquon) # Summarize each player
+summary(df_6_tiki)
+
+
+# Visualize the distributions for key variables - note that the sample is limited at 6.
+
+# Rushing Metrics: first 6 years.
+
+ggplot(data=df_6, aes(x = df_6$`Yds-Rush`, y = df_6$'TD-Rush', color = Player)) +
+  geom_point(data = df_6, aes(y = df_6$`TD-Rush`, x = df_6$`Yds-Rush`, color = Player)) + 
+  geom_smooth(method = lm, se = FALSE) +
+  labs(y = "Rushing TDs", x = "Rushing Yards", title = "First 6 Seasons - Scatter Plot: Rushing TDs and Yards - Barber vs Barkley") +
+  scale_color_manual(values = c("red", "blue")) + 
+  xlim(0, 1500) +
+  theme_linedraw()
+
+ggplot(data=df_6, aes(x = Player, y = `Yds-Rush`, fill = Player)) +
+  geom_violin(data = df_6, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "Player", y = "Rushing Yards", title = "First 6 Seasons - Box Plot: Rushing Yards - Barber vs Barkley") +
+  scale_fill_manual(values = c("red", "blue")) + 
+  ylim(0, 2500) +
+  theme_linedraw()
+
+ggplot(data=df_6, aes(x = Player, y = `YPR`, fill = Player)) +
+  geom_violin(data = df_6, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "Player", y = "Yards per Carry", title = "First 6 Seasons - Box Plot: Yards per Carry - Barber vs Barkley") +
+  scale_fill_manual(values = c("red", "blue")) + 
+  theme_linedraw()
+
+ggplot(data=df_6, aes(x = Player, y = `Car`, fill = Player)) +
+  geom_violin(data = df_6, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "Player", y = "Carries", title = "First 6 Seasons - Box Plot: Total Carries - Barber vs Barkley") +
+  scale_fill_manual(values = c("red", "blue")) + 
+  ylim(0, 350) +
+  theme_linedraw()
+
+# Receiving Metrics: First 6 Seasons.
+
+ggplot(data=df_6, aes(x = df_6$`Yds-Rec`, y = df_6$'TD-Rec', color = Player)) +
+  geom_point(data = df_6, aes(y = df_6$`TD-Rec`, x = df_6$`Yds-Rec`, color = Player)) + 
+  labs(y = "Receiving TDs", x = "Receiving Yards", title = "First 6 Seasons - Scatter Plot: Receiving TDs and Yards - Barber vs Barkley") +
+  scale_color_manual(values = c("red", "blue")) + 
+  theme_linedraw()
+
+ggplot(data=df_6, aes(x = Player, y = `Yds-Rec`, fill = Player)) +
+  geom_violin(data = df_6, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "Player", y = "Receiving Yards", title = "First 6 Seasons - Box Plot: Receiving Yards - Barber vs Barkley") +
+  scale_fill_manual(values = c("red", "blue")) + 
+  theme_linedraw()
+
+ggplot(data=df_6, aes(x = Player, y = df_6$YPC, fill = Player)) +
+  geom_violin(data = df_6, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "Player", y = "Yards per Reception", title = "First 6 Seasons - Box Plot: Yards per Reception - Barber vs Barkley") +
+  scale_fill_manual(values = c("red", "blue")) + 
+  theme_linedraw()
+
+ggplot(data=df_6, aes(x = Player, y = `REC`, fill = Player)) +
+  geom_violin(data = df_6, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "Player", y = "Receptions", title = "First 6 Seasons - Box Plot: Total Receptions - Barber vs Barkley") +
+  scale_fill_manual(values = c("red", "blue")) + 
+  theme_linedraw()
+
+ggplot(data=df_6, aes(x = Player, y = df_6$`TD-Rec`, fill = Player)) +
+  geom_violin(data = df_6, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "Player", y = "Receiving TDs", title = "First 6 Seasons - Box Plot: Total Receiving TDs - Barber vs Barkley") +
+  scale_fill_manual(values = c("red", "blue")) + 
+  ylim(0, 10) +
+  theme_linedraw()
+
+glimpse(df_6_sub) %>% flextable()
+
+
+```
+
+
+## First 6 Years Summary
+Although Saquon Barkely had a more impressive rookie season in the NFL, he did tear his ACL in week 2 of his third season (2020), which impacted his growth as a professional and not to mention the number of touches Saquon had was about twice as much as Tiki (352 compared to 170).  The first observation is that Saquon has had more success rushing the ball for yardage (with higher quartiles in the 25th, 50th, and 75th) while Tiki has slightly higher yards per carry, partly in due to the ACL injury in Saquon's third year (1.8 yards per run in 2020).  Saquon received more rushing attempts (25th percentile at about 165) compared to Tiki (50th percentile at around 150) - it should be noted that Tiki started receiving many more touches in his last 3 seasons (each with at least 300 caries).  Where Tiki shines is in the passing game where he has received for about 520 yards in his 50th percentile compared to Saquons 275 yards.  Additionally, Tiki easily has more yards per catch probably due to greater opportunities in the screen game instead of dump offs in the flats.
+
+```{r Last 3 Seasons, echo=FALSE}
+
+df_l3_t <- df %>% filter(Player == 'Tiki Barber') %>% 
+           arrange('Season Number') %>% 
+           slice(nrow(.) - 2:0)
+
+df_l3_s <- df %>% filter(Player == 'Saquon Barkley') %>% 
+           arrange('Season Number') %>% 
+           slice(nrow(.) - 2:0)
+
+df_l3 <- rbind(df_l3_t, df_l3_s)
+
+df_l3_sub <- df_l3 %>% select('Player', 'Season', "Season Number", 'Car', 'Yds-Rush', 'YPR', 'TD-Rush', 'REC', 'Yds-Rec', 'YPC', 'TD-Rec')
+
+glimpse(df_l3) %>% flextable()
+
+summary(df_l3_t) # Summarize each player
+summary(df_l3_s)
+
+# Rushing Metrics: Last 3 Seasons.
+
+ggplot(data=df_l3, aes(x = df_l3$`Yds-Rush`, y = df_l3$`TD-Rush`, color = Player)) +
+  geom_point(data = df_l3, aes(y = df_l3$`TD-Rush`, x = df_l3$`Yds-Rush`, color = Player)) + 
+  labs(y = "Rushing TDs", x = "Rushing Yards", title = "Last 3 Seasons - Scatter Plot: Rushing TDs and Yards - Barber vs Barkley") +
+  scale_color_manual(values = c("red", "blue")) + 
+  theme_linedraw()
+
+ggplot(data=df_l3, aes(x = Player, y = `Yds-Rush`, fill = Player)) +
+  geom_violin(data = df_l3, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "Player", y = "Rushing Yards", title = "Last 3 Seasons - Box Plot: Rushing Yards - Barber vs Barkley") +
+  scale_fill_manual(values = c("red", "blue")) + 
+  theme_linedraw()
+
+ggplot(data=df_l3, aes(x = Player, y = `YPR`, fill = Player)) +
+  geom_violin(data = df_l3, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "Player", y = "Yards per Carry", title = "Last 3 Seasons - Box Plot: Yards per Carry - Barber vs Barkley") +
+  scale_fill_manual(values = c("red", "blue")) + 
+  theme_linedraw()
+
+ggplot(data=df_l3, aes(x = Player, y = `Car`, fill = Player)) +
+  geom_violin(data = df_l3, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "Player", y = "Carries", title = "Last 3 Seasons - Box Plot: Total Carries - Barber vs Barkley") +
+  scale_fill_manual(values = c("red", "blue")) + 
+  theme_linedraw()
+
+# Receiving Metrics: Last 3 Seasons.
+
+ggplot(data=df_l3, aes(x = df_l3$`Yds-Rec`, y = df_l3$'TD-Rec', color = Player)) +
+  geom_point(data = df_l3, aes(y = df_l3$`TD-Rec`, x = df_l3$`Yds-Rec`, color = Player)) + 
+  labs(y = "Receiving TDs", x = "Receiving Yards", title = "Last 3 Seasons - Scatter Plot: Receiving TDs and Yards - Barber vs Barkley") +
+  scale_color_manual(values = c("red", "blue")) + 
+  theme_linedraw()
+
+ggplot(data=df_l3, aes(x = Player, y = `Yds-Rec`, fill = Player)) +
+  geom_violin(data = df_l3, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "Player", y = "Receiving Yards", title = "Last 3 Seasons - Box Plot: Receiving Yards - Barber vs Barkley") +
+  scale_fill_manual(values = c("red", "blue")) + 
+  theme_linedraw()
+
+ggplot(data=df_l3, aes(x = Player, y = df_l3$YPC, fill = Player)) +
+  geom_violin(data = df_l3, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "Player", y = "Yards per Reception", title = "Last 3 Seasons - Box Plot: Yards per Reception - Barber vs Barkley") +
+  scale_fill_manual(values = c("red", "blue")) + 
+  theme_linedraw()
+
+ggplot(data=df_l3, aes(x = Player, y = `REC`, fill = Player)) +
+  geom_violin(data = df_l3, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "Player", y = "Receptions", title = "Last 3 Seasons - Box Plot: Total Receptions - Barber vs Barkley") +
+  scale_fill_manual(values = c("red", "blue")) + 
+  theme_linedraw()
+
+ggplot(data=df_l3, aes(x = Player, y = df_l3$`TD-Rec`, fill = Player)) +
+  geom_violin(data = df_l3, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "Player", y = "Receiving TDs", title = "Last 3 Seasons - Box Plot: Total Receiving TDs - Barber vs Barkley") +
+  scale_fill_manual(values = c("red", "blue")) + 
+  ylim(0, NA) +
+  theme_linedraw()
+
+glimpse(df_l3_sub) %>% flextable()
+
+```
+
+## Last 3 Seasons Summary
+Although Saquon had a greater impact as a rusher during his first 6 seasons (with greater number of carries), Tiki consistently carried his team with more than 300 carries in his last 3 seasons.  Interestingly, he did not sustain any major injuries towards the latter half of his career.  Not only did he get a greater number of touches during the 2004 - 2006 season, he also averaged more than 5 yards per carry during that span.  Barber was also more dominant receiving the ball out of the backfield averaging 9.6 yards per reception compared to Barkley at 6.4 yards per reception.  
+Despite his pro bowl performance on the field, it should be noted that Tiki was causing some issues off the field [Youtube](https://www.youtube.com/watch?v=Fk1XqrljVyI&pp=ygUgdGlraSBiYXJiZXIgb2ZmIHRoZSBmaWVsZCBpc3N1ZXM%3D).  Even though he was causing disturbances in the media, he performed at an elite level in his last 3 years and his coach (Tom Coughlin) improved on his fumbling problem.  In 2006, Tiki retired from football after a 10 year career and transitioned into broadcasting. Oddly enough, the New York Giants finally won the Super Bowl in 2007.  With this analysis, it is safe to say that Tiki was the overall 'more productive' Giant, whereas Saquon still has time to establish his legacy.  Saquon has recently left for the close rival Philadelphia Eagles and we will see if he is able to bounce back to his elite rookie year [Gmen HQ](https://gmenhq.com/posts/saquon-barkley-prediction-eagles-makes-his-giants-exit-even-worse-01j181nkv7bx).

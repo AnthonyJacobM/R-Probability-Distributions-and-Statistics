@@ -1,0 +1,88 @@
+---
+title: "Negative Binomial Distribution - Measures of Central Tendency"
+author: "Anthony Morciglio"
+date: "09/18/2025"
+output: html_document
+---
+
+## Developing Intution for the Negative Binomial Distribution
+
+The R code generates visualizations of the **Negative Binomial Distribution** for the case of 
+\( r = 3 \) successes and probability of success \( p = 0.4 \).  
+First, the code calculates the measures of central tendency:  
+
+- **Mean**: \( \mu = \frac{r(1-p)}{p} \)  
+- **Variance**: \( \sigma^2 = \frac{r(1-p)}{p^2} \)  
+- **Mode**: \( \left\lfloor \frac{(r-1)(1-p)}{p} \right\rfloor \) (when \( r > 1 \))  
+- **Median**: determined numerically as the smallest \( k \) such that the cumulative distribution function (CDF) satisfies \( F_Y(k) \geq 0.5 \).  
+
+The code then creates two barplot-style histograms:  
+
+1. **PMF Plot** – Displays the probability mass function (PMF) values  
+   \( P(Y = k) = \binom{k+r-1}{k} (1-p)^k p^r \)  
+   for \( k = 0, 1, 2, \dots \).  
+   Vertical dashed lines in **red**, **blue**, and **black** mark the mean, median, and mode.  
+
+2. **CDF Plot** – Displays the cumulative distribution function (CDF)  
+   \( F_Y(k) = P(Y \leq k) \).  
+   Again, vertical reference lines highlight the mean, median, and mode for comparison.  
+
+Both plots are filled with a baby blue color for clarity, and legends identify the reference statistics.  
+This side-by-side visualization allows for a clear comparison of the theoretical properties of the distribution and how probabilities accumulate across values of \( k \).
+
+
+
+```{r setup, warning = FALSE, message = FALSE}
+# R code: PMF and CDF of Negative Binomial Distribution
+# Example: r = 3 successes, p = 0.4 probability of success
+
+# Parameters
+r <- 3
+p <- 0.4
+
+# Measures of central tendency
+mean_val   <- r * (1 - p) / p
+var_val    <- r * (1 - p) / (p^2)
+mode_val   <- if (r > 1) floor((r - 1) * (1 - p) / p) else 0
+
+# Compute the median numerically: smallest k with CDF >= 0.5
+k_vals <- 0:30  # support range
+cdf_vals <- pnbinom(k_vals, size = r, prob = p)
+median_val <- min(k_vals[cdf_vals >= 0.5])
+
+cat("Mean =", mean_val, "\n")
+cat("Variance =", var_val, "\n")
+cat("Mode =", mode_val, "\n")
+cat("Median =", median_val, "\n")
+
+# ---- Plot PMF ----
+pmf_vals <- dnbinom(k_vals, size = r, prob = p)
+
+barplot(height = pmf_vals, names.arg = k_vals,
+        col = "lightblue", border = "white",
+        main = "Negative Binomial PMF (r=3, p=0.4)",
+        xlab = "Number of Failures (k)", ylab = "Probability")
+
+# Overlay vertical lines for mean, median, mode
+abline(v = mean_val + 1, col = "red", lwd = 2, lty = 2)    # offset for bar centers
+abline(v = median_val + 1, col = "blue", lwd = 2, lty = 2)
+abline(v = mode_val + 1, col = "black", lwd = 2, lty = 2)
+
+legend("topright", legend = c("Mean", "Median", "Mode"),
+       col = c("red", "blue", "black"), lty = 2, lwd = 2, bty = "n")
+
+# ---- Plot CDF as Histogram ----
+barplot(height = cdf_vals, names.arg = k_vals,
+        col = "lightblue", border = "white",
+        main = "Negative Binomial CDF (r=3, p=0.4)",
+        xlab = "Number of Failures (k)", ylab = "Cumulative Probability")
+
+# Overlay vertical lines for mean, median, mode
+abline(v = mean_val + 1, col = "red", lwd = 2, lty = 2)
+abline(v = median_val + 1, col = "blue", lwd = 2, lty = 2)
+abline(v = mode_val + 1, col = "black", lwd = 2, lty = 2)
+
+legend("bottomright", legend = c("Mean", "Median", "Mode"),
+       col = c("red", "blue", "black"), lty = 2, lwd = 2, bty = "n")
+
+```

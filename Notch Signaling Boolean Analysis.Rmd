@@ -1,0 +1,268 @@
+---
+title: 'Notch Signaling Boolean Analysis'
+author: "Anthony Morciglio"
+date: "9/10/2025"
+output: html_document
+---
+
+## Applying Bernoulli Distributions and Boolean Logic to the Notch Signaling Pathway
+The provided R code implements a Boolean network simulation of the Notch signaling pathway, specifically modeling interactions between key genes and proteins such as Notch, Delta, Jagged1, NICD, and VEGF. Each node represents a gene or cell phenotype, while edges denote regulatory interactions between them. Node attributes like color and size reflect the cell’s phenotype and relative activity, allowing researchers to visualize which cells are more likely to become sender, receiver, or intermediate types. The code leverages DiagrammeR and visNetwork for interactive network visualization, enabling clear interpretation of complex signaling relationships. This simulation directly complements the blog post by translating the biological concepts of Notch signaling and phenotypic plasticity into an interpretable computational framework. It demonstrates how probabilistic gene expression and network topology can be explored in silico, providing insights into the functional role of oncogenes like Jagged1 in breast and lung cancer.
+
+
+```{r setup, warning=FALSE, message=FALSE, echo=FALSE}
+###############################################################################
+# Corrected Boolean-network probabilistic simulation for Jagged1/Notch signaling
+# - Fixes subscript-out-of-bounds when applying per-gene flip probabilities
+###############################################################################
+
+library(tidyverse)
+library(igraph)
+library(DiagrammeR)
+library(scales)
+library(ggplot2)
+
+set.seed(42)
+
+##### Parameters and user inputs #####
+n_cells <- 50          # number of cells to simulate
+t_steps <- 20          # number of synchronous update steps
+edge_prob <- 0.08      # probability of an edge between cells (network density)
+flip_base <- 0.05      # base spontaneous flip probability (noise)
+ligand_effect_weight <- 1.0 # weight for ligand influence on NICD activation
+
+# Choose noise/distribution option: "bernoulli", "beta", "normal"
+distribution_choice <- "beta"
+
+##### Generate toy expression data (or replace with real data) #####
+expr_mat <- matrix(runif(n_cells*5, min=0, max=1),
+                   nrow=n_cells, ncol=5,
+                   dimnames=list(NULL, c("Notch","Delta","Jagged","NICD_expr","VEGF")))
+
+##### Functions to convert expression to initial binary states #####
+prob_from_expr <- function(x, method="linear") {
+  if (method == "linear") return(pmin(pmax(x,0),1))
+  if (method == "sigmoid") return(plogis((x - 0.5) * 8))
+  x
+}
+
+sample_initial_states <- function(expr_row, dist_choice="bernoulli") {
+  p <- prob_from_expr(expr_row, method="linear")
+  if (dist_choice == "bernoulli") {
+    return(rbinom(length(p), size=1, prob=p))
+  } else if (dist_choice == "beta") {
+    conc <- 10
+    alpha <- p * conc + 1e-6
+    beta <- (1-p) * conc + 1e-6
+    p_samp <- rbeta(length(p), alpha, beta)
+    return(rbinom(length(p), 1, prob=p_samp))
+  } else if (dist_choice == "normal") {
+    noisy <- p + rnorm(length(p), sd=0.15)
+    return(as.integer(noisy > 0.5))
+  } else {
+    stop("unknown dist_choice")
+  }
+}
+
+##### Build contact network between cells #####
+g <- erdos.renyi.game(n=n_cells, p.or.m=edge_prob, type="gnp", directed=FALSE, loops=FALSE)
+adj_mat <- as.matrix(as_adj(g))
+
+##### Initialize binary states #####
+states <- t(apply(expr_mat, 1, sample_initial_states, dist_choice = distribution_choice))
+colnames(states) <- c("Notch","Delta","Jagged","NICD","VEGF")
+
+##### Robust Boolean rule definitions (customize as needed) #####
+update_rule <- function(cell_index, states_prev, adj_mat, flip_prob_vec=NULL) {
+  # states_prev: matrix n_cells x 5 columns (Notch, Delta, Jagged, NICD, VEGF)
+  s <- as.numeric(states_prev[cell_index, ])
+  names(s) <- colnames(states_prev)
+  neighbors <- which(adj_mat[cell_index, ] == 1)
+  
+  ligand_count <- 0
+  if (length(neighbors) > 0) {
+    ligand_count <- sum(states_prev[neighbors, "Delta"]) + sum(states_prev[neighbors, "Jagged"])
+  }
+  ligand_prob <- 1 - exp(-ligand_effect_weight * ligand_count)
+  
+  new_Notch <- s["Notch"]
+  new_Delta <- ifelse(s["VEGF"] > 0, 1, s["Delta"])
+  new_Jagged <- ifelse(s["VEGF"] > 0.7, 1, s["Jagged"])
+  new_NICD <- as.integer((s["Notch"] == 1) & (runif(1) < ligand_prob))
+  new_VEGF <- s["VEGF"]
+  
+  new_state <- c(Notch=new_Notch, Delta=new_Delta, Jagged=new_Jagged, NICD=new_NICD, VEGF=new_VEGF)
+  
+  # SAFELY apply noise / flips:
+  for (gname in names(new_state)) {
+    # determine flip probability for this gene:
+    flip_p <- flip_base  # default fallback
+    if (!is.null(flip_prob_vec)) {
+      # If vec has names and contains gname, use that; otherwise fallback to flip_base
+      if (!is.null(names(flip_prob_vec)) && (gname %in% names(flip_prob_vec))) {
+        flip_p_tmp <- as.numeric(flip_prob_vec[[gname]])
+        if (!is.na(flip_p_tmp) && length(flip_p_tmp) == 1) flip_p <- flip_p_tmp
+      } else if (length(flip_prob_vec) == 1) {
+        # single numeric provided -> treat as uniform flip prob
+        flip_p <- as.numeric(flip_prob_vec[1])
+      }
+    }
+    if (runif(1) < flip_p) {
+      new_state[gname] <- 1 - as.integer(new_state[gname])
+    }
+  }
+  
+  return(as.integer(new_state))
+}
+
+##### Helper: phenotype classifier #####
+classify_phenotype <- function(state_row) {
+  if (state_row["Jagged"] == 1 & state_row["Notch"] == 0 & state_row["NICD"] == 0) return("sender")
+  if (state_row["Notch"] == 1 & state_row["NICD"] == 1) return("receiver")
+  return("intermediate")
+}
+
+##### Simulation loop #####
+state_history <- array(NA, dim=c(t_steps+1, n_cells, ncol(states)), dimnames=list(NULL, NULL, colnames(states)))
+phenotype_history <- matrix(NA, nrow=t_steps+1, ncol=n_cells)
+state_history[1,,] <- states
+phenotype_history[1,] <- apply(states, 1, classify_phenotype)
+
+for (t in seq_len(t_steps)) {
+  states_prev <- state_history[t,, ]  # matrix n_cells x genes
+  
+  # Build per-cell flip probability vectors
+  flip_probs_list <- vector("list", length = n_cells)
+  for (i in seq_len(n_cells)) {
+    if (distribution_choice == "bernoulli") {
+      fp <- rep(flip_base, ncol(states_prev))
+    } else if (distribution_choice == "beta") {
+      alpha <- flip_base * 50 + 1
+      beta <- (1-flip_base) * 50 + 1
+      per_cell_fp <- rbeta(1, alpha, beta)
+      fp <- rep(per_cell_fp, ncol(states_prev))
+    } else if (distribution_choice == "normal") {
+      per_cell_fp <- pmin(pmax(rnorm(1, mean=flip_base, sd=0.02), 0), 1)
+      fp <- rep(per_cell_fp, ncol(states_prev))
+    } else {
+      fp <- rep(flip_base, ncol(states_prev))
+    }
+    flip_probs_list[[i]] <- setNames(fp, colnames(states_prev))
+  }
+  
+  # synchronous update
+  new_states <- matrix(NA, nrow=n_cells, ncol=ncol(states_prev))
+  colnames(new_states) <- colnames(states_prev)
+  for (i in seq_len(n_cells)) {
+    new_states[i, ] <- update_rule(i, states_prev, adj_mat, flip_prob_vec = flip_probs_list[[i]])
+  }
+  
+  state_history[t+1,,] <- new_states
+  phenotype_history[t+1,] <- apply(as.data.frame(new_states), 1, classify_phenotype)
+}
+
+##### Summarize final state and phenotype frequencies #####
+final_states <- state_history[t_steps+1,,]
+final_phenotypes <- phenotype_history[t_steps+1,]
+print(table(final_phenotypes))
+
+##### (Optional) create a DiagrammeR visualization as before
+nodes_df <- data.frame(id = seq_len(n_cells),
+                       label = paste0("C", seq_len(n_cells)),
+                       phenotype = final_phenotypes,
+                       NICD = final_states[,"NICD"],
+                       Jagged = final_states[,"Jagged"],
+                       Delta = final_states[,"Delta"],
+                       stringsAsFactors = FALSE)
+
+phen_col <- c(sender = "tomato", receiver = "steelblue", intermediate = "goldenrod")
+phen_size <- c(sender = 0.6, receiver = 1.2, intermediate = 0.9)
+nodes_df$size_rel <- phen_size[nodes_df$phenotype] + 0.6 * nodes_df$NICD
+
+edges <- as_data_frame(g, what="edges")
+graph <- create_graph()
+
+for (i in seq_len(nrow(nodes_df))) {
+  graph <- add_node(
+    graph,
+    label   = nodes_df$label[i],
+    type    = nodes_df$phenotype[i],
+    node_aes = node_aes(
+      style     = "filled",
+      color     = "black",
+      fillcolor = phen_col[nodes_df$phenotype[i]],
+      width     = nodes_df$size_rel[i],
+      height    = nodes_df$size_rel[i]
+    )
+  )
+}
+
+
+
+
+
+
+if (nrow(edges) > 0) {
+  for (r in seq_len(nrow(edges))) {
+    graph <- add_edge(graph, from=edges$from[r], to=edges$to[r])
+  }
+}
+
+for (i in seq_len(nrow(edges))) {
+  graph <- add_edge(
+    graph,
+    from = edges$from[i],
+    to   = edges$to[i],
+    edge_aes = edge_aes(color = "gray")
+  )
+}
+
+
+render_graph(graph, layout = "neato")
+
+##### (Optional) plot phenotype counts over time #####
+phenotype_df <- as.data.frame(t(apply(phenotype_history, 1, function(x) table(factor(x, levels=c("sender","receiver","intermediate"))))))
+colnames(phenotype_df) <- c("sender","receiver","intermediate")
+phenotype_df$t <- 0:t_steps
+phenotype_long <- phenotype_df %>% pivot_longer(cols = c(sender,receiver,intermediate), names_to="phen", values_to="count")
+
+ggplot(phenotype_long, aes(x=t, y=count, color=phen)) +
+  geom_line(size=1.1) +
+  labs(x="Time step", y="Number of cells", color="Phenotype", title="Phenotype counts over time") +
+  theme_minimal()
+
+
+
+
+
+
+
+
+# Create node df with aes
+node_df <- create_node_df(
+  n = nrow(nodes_df),
+  label = nodes_df$label,
+  type = nodes_df$phenotype,
+  node_aes = node_aes(
+    style = "filled",
+    color = "black",
+    fillcolor = phen_col[nodes_df$phenotype],
+    width = nodes_df$size_rel,
+    height = nodes_df$size_rel
+  )
+)
+
+# Create edge df (basic gray edges)
+edge_df <- create_edge_df(
+  from = edges$from,
+  to = edges$to,
+  edge_aes = edge_aes(color = "gray")
+)
+
+# Combine into graph
+graph <- create_graph(nodes_df = node_df, edges_df = edge_df)
+
+# Render
+render_graph(graph, output = "visNetwork")
+
+```
+

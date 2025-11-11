@@ -1,0 +1,148 @@
+---
+title: "Exponential Distribution: Quantile and CDF Functions"
+author: "Anthony Morciglio"
+date: "2025-08-23"
+output: html_document
+---
+
+
+## Applying the Quantile Function to Visualize the Value corresponding to the Probability of an Exponential Distribution
+
+This R script provides a hands-on illustration of the exponential distribution's Cumulative Distribution Function (CDF) and its inverse, the Quantile Function. The two plots produced by the script serve as a visual companion to the mathematical derivations. The first plot shows the traditional CDF, mapping a value on the x-axis to its cumulative probability on the y-axis. The second plot then inverts this relationship, using the quantile function to map a probability on the x-axis to the corresponding value on the y-axis. Together, these visualizations clearly demonstrate how the quantile function is used to find specific points in the distribution, such as the median or other percentiles, given a desired probability.
+
+```{r setup, warning = FALSE, message = FALSE, echo = FALSE
+knitr::opts_chunk$set(echo = FALSE)
+}
+```
+
+```{r setup}
+# This R script provides functions to calculate and plot the
+# exponential distribution's Cumulative Distribution Function (CDF)
+# and its inverse, the Quantile Function.
+
+# Required Library:
+# ggplot2 for creating high-quality, professional plots.
+if (!requireNamespace("ggplot2", quietly = TRUE)) {
+  install.packages("ggplot2")
+}
+library(ggplot2)
+
+# -----------------------------------------------------------------------------
+# 1. Define the Quantile and CDF Functions
+# -----------------------------------------------------------------------------
+# The Quantile Function (inverse of the CDF)
+# Q(p) = -1/lambda * ln(1 - p)
+# @param p The probability or quantile (from 0 to 1).
+# @param lambda The rate parameter of the exponential distribution.
+# @return The value x corresponding to the probability p.
+quantile_exponential <- function(p, lambda) {
+  return(-1 / lambda * log(1 - p))
+}
+
+# The Cumulative Distribution Function (CDF)
+# F(x) = 1 - e^(-lambda * x)
+# @param x The value to evaluate the CDF at.
+# @param lambda The rate parameter.
+# @return The cumulative probability.
+cdf_exponential <- function(x, lambda) {
+  return(1 - exp(-lambda * x))
+}
+
+# -----------------------------------------------------------------------------
+# 2. Demonstrate the Inverse Relationship
+# -----------------------------------------------------------------------------
+# Set a sample lambda value.
+lambda_val <- 0.5
+
+# Let's find the value for the 50th percentile (the median).
+p_val <- 0.50
+x_val <- quantile_exponential(p_val, lambda_val)
+
+cat(sprintf("Using lambda = %.2f\n", lambda_val))
+cat("--------------------------------\n")
+cat(sprintf("The value for the %.0f%% percentile is x = %.4f\n", p_val * 100, x_val))
+
+# Now, we can check if this value maps back to the original probability using the CDF.
+check_p <- cdf_exponential(x_val, lambda_val)
+cat(sprintf("Checking the CDF at x = %.4f gives a probability of p = %.4f\n", x_val, check_p))
+cat("--------------------------------\n")
+
+
+# Let's find the value for the 95th percentile.
+p_val_95 <- 0.95
+x_val_95 <- quantile_exponential(p_val_95, lambda_val)
+cat(sprintf("The value for the %.0f%% percentile is x = %.4f\n", p_val_95 * 100, x_val_95))
+
+# -----------------------------------------------------------------------------
+# 3. Create a Visualization to Illustrate the Inverse Relationship
+# -----------------------------------------------------------------------------
+# Create a data frame for plotting the CDF.
+x_range <- seq(0.01, 8.01, length.out = 500)
+cdf_data <- data.frame(
+  x = x_range,
+  p = cdf_exponential(x_range, lambda_val)
+)
+
+# Plot the CDF.
+cdf_plot <- ggplot(cdf_data, aes(x = x, y = p)) +
+  # Add the main CDF curve.
+  geom_line(color = "blue", linewidth = 1) +
+  # Add horizontal line from the 50th percentile.
+  geom_hline(yintercept = p_val, linewidth = 1.25, linetype = "dashed", color = "black") +
+  # Add vertical line from the 50th percentile to the x-axis.
+  geom_vline(xintercept = x_val, linewidth = 1.25, linetype = "dashed", color = "black") +
+  # Mark the intersection point.
+  geom_point(aes(x = x_val, y = p_val), color = "orange", size = 3) +
+  # Add labels and a title.
+  labs(
+    title = "Exponential Distribution CDF: Value from Probability",
+    subtitle = bquote(lambda == .(lambda_val)),
+    x = "x (Value)",
+    y = "p (Probability)"
+  ) +
+  # Set the theme and customize aesthetics.
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5))
+
+print(cdf_plot)
+
+
+# -----------------------------------------------------------------------------
+# 4. Create a Visualization to Illustrate the Quantile Function
+# -----------------------------------------------------------------------------
+# Create a range of probabilities for the plot.
+p_range <- seq(0.001, 0.999, length.out = 500)
+
+# Create a data frame for plotting the quantile function.
+quantile_data <- data.frame(
+  p = p_range,
+  x = quantile_exponential(p_range, lambda_val)
+)
+
+# Plot the Quantile Function.
+quantile_plot <- ggplot(quantile_data, aes(x = p, y = x)) +
+  # Add the main Quantile Function curve.
+  geom_line(color = "red", linewidth = 1) +
+  # Add vertical line from the 50th percentile.
+  geom_vline(xintercept = p_val, linetype = "dashed", linewidth = 1.25, color = "black") +
+  # Add horizontal line from the 50th percentile to the y-axis.
+  geom_hline(yintercept = x_val, linetype = "dashed", linewidth = 1.25, color = "black") +
+  # Mark the intersection point.
+  geom_point(aes(x = p_val, y = x_val), color = "orange", size = 3) +
+  # Add labels and a title.
+  labs(
+    title = "Exponential Distribution Quantile Function: Probability to Value",
+    subtitle = bquote(lambda == .(lambda_val)),
+    x = "p (Probability)",
+    y = "x (Value)"
+  ) +
+  # Set the theme and customize aesthetics.
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5))
+
+print(quantile_plot)
+```
+
+

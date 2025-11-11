@@ -1,0 +1,62 @@
+---
+title: "Convergence of the Student's t-Distribution to the Normal Distribution"
+author: "Anthony Morciglio"
+date: "10/28/2025"
+output: html_document
+---
+
+
+## Limiting Distribution of the Student T
+
+In this section, we illustrate the limiting behavior of the Student’s t-distribution as the degrees of freedom (𝜈) increase. The Student’s t-distribution is known to approximate the Standard Normal Distribution as 𝜈 \rightarrow \infty, since the variability due to estimating the population variance decreases with larger sample sizes.
+
+The R code below generates several t-distributions with different degrees of freedom — specifically, 𝜈 = 2, 5, 10, 30, 100 ν = 2,5,10,30,100 — and compares them to the standard normal curve N(0,1)
+
+The steps performed in the code are as follows:
+
+Generate x-values from −4 to 4 to represent the range of both distributions.
+
+Compute probability densities for multiple t-distributions using the dt() function and for the normal distribution using dnorm().
+
+Combine all results into a single data frame suitable for plotting with ggplot2.
+
+Overlay the curves using distinct colors and line types to visualize convergence.
+
+The resulting plot demonstrates that as the degrees of freedom increase, the t-distribution’s tails become thinner, and its shape approaches the normal distribution.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# Load required package
+library(ggplot2)
+
+# Define a sequence of x-values
+x <- seq(-4, 4, length.out = 400)
+
+# Define degrees of freedom for multiple t-distributions
+dfs <- c(2, 5, 10, 30, 100)
+
+# Create a data frame for plotting
+df_data <- data.frame(
+  x = rep(x, times = length(dfs) + 1),
+  density = c(sapply(dfs, function(df) dt(x, df)), dnorm(x)),
+  Distribution = factor(rep(c(paste0("t(df=", dfs, ")"), "Normal(0,1)"), each = length(x)),
+                        levels = c(paste0("t(df=", dfs, ")"), "Normal(0,1)"))
+)
+
+# Plot the t-distributions and the normal distribution
+ggplot(df_data, aes(x = x, y = density, color = Distribution, linetype = Distribution)) +
+  geom_line(size = 1.1) +
+  scale_color_manual(values = c("#FF6666", "#FF9933", "#66CC66", "#3399FF", "#9966CC", "black")) +
+  labs(
+    title = "Convergence of the Student's t-Distribution to the Normal Distribution",
+    subtitle = "As degrees of freedom increase, the t-distribution approaches N(0,1)",
+    x = "x",
+    y = "Density"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", color = "#003366"),
+    legend.position = "top"
+  )
+
+```
+

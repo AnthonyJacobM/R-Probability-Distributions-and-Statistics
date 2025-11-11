@@ -1,0 +1,86 @@
+---
+title: "Bayesian Inference - Beta Distribution"
+author: "Anthony Morciglio"
+date: "10/25/2025"
+output: html_document
+---
+
+## Bayesian Inference using the Beta Distribution
+
+In this section, we will illustrate how the **Beta distribution** is used in Bayesian inference to model the uncertainty about a proportion \( p \).  
+We begin with a **prior distribution** that encodes our initial belief about \( p \), and after observing data (successes and failures), we update our belief to obtain the **posterior distribution**.
+
+In the example from the blog:
+- We observe \( n = 40 \) users, of whom \( k = 30 \) prefer a new website layout.
+- We assume a **Uniform prior** \( \text{Beta}(1, 1) \), which expresses no strong prior belief.
+- The **posterior** is \( \text{Beta}(31, 11) \), using the conjugate update formula:
+  \[
+  p \mid k, n \sim \text{Beta}(\alpha + k, \beta + n - k)
+  \]
+  
+The code below:
+1. Defines the prior, likelihood, and posterior parameters.  
+2. Plots the **prior** and **posterior** Beta distributions to visualize how the data updates our beliefs.  
+3. Computes the **posterior mean, mode, and 95% credible interval**.  
+4. Uses the **incomplete Beta function** (`pbeta()`) to compute the probability \( P(p > 0.6) \), i.e., the probability that the true preference rate exceeds 60%.  
+5. Provides interpretive text and visualizations to accompany the Bayesian update process.
+
+---
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+
+# Parameters of the prior (Uniform)
+alpha_prior <- 1
+beta_prior  <- 1
+
+# Observed data
+n <- 40
+k <- 30
+
+# Posterior parameters
+alpha_post <- alpha_prior + k
+beta_post  <- beta_prior + n - k
+
+# Define grid for p
+p_seq <- seq(0, 1, length.out = 1000)
+
+# Compute densities
+prior_density <- dbeta(p_seq, alpha_prior, beta_prior)
+posterior_density <- dbeta(p_seq, alpha_post, beta_post)
+
+# Compute summary stats
+posterior_mean <- alpha_post / (alpha_post + beta_post)
+posterior_mode <- (alpha_post - 1) / (alpha_post + beta_post - 2)
+credible_interval <- qbeta(c(0.025, 0.975), alpha_post, beta_post)
+prob_greater_0.6 <- 1 - pbeta(0.6, alpha_post, beta_post)
+
+# Display numeric summaries
+cat("Posterior Mean:", round(posterior_mean, 3), "\n")
+cat("Posterior Mode:", round(posterior_mode, 3), "\n")
+cat("95% Credible Interval: [", round(credible_interval[1], 3), ",", 
+    round(credible_interval[2], 3), "]\n")
+cat("P(p > 0.6) =", round(prob_greater_0.6, 4), "\n")
+
+# Set y-axis range to fit both distributions
+y_max <- max(c(prior_density, posterior_density)) * 1.1
+
+# Plot both distributions with adaptive scaling
+plot(p_seq, prior_density, type = "l", lwd = 2, col = "gray60",
+     main = "Bayesian Inference for Proportion (Properly Scaled)",
+     ylab = "Density", xlab = "Proportion (p)",
+     ylim = c(0, y_max))
+lines(p_seq, posterior_density, col = "blue", lwd = 2)
+abline(v = 0.6, col = "red", lty = 2)
+
+# Annotate posterior mean and CI
+abline(v = posterior_mean, col = "darkgreen", lwd = 2)
+segments(credible_interval[1], 0, credible_interval[2], 0, lwd = 4, col = "darkgreen")
+
+legend("topleft",
+       legend = c("Prior: Beta(1,1)", "Posterior: Beta(31,11)", "Threshold p = 0.6", "Posterior Mean / CI"),
+       col = c("gray60", "blue", "red", "darkgreen"),
+       lwd = c(2, 2, 1, 2),
+       lty = c(1, 1, 2, 1),
+       bty = "n")
+
+```

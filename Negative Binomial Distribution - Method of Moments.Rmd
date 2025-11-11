@@ -1,0 +1,110 @@
+---
+title: "Negative Binomial Distribution - Method of Moments"
+author: "Anthony Morciglio"
+date: "09/18/2025"
+output: html_document
+---
+
+The R code provided demonstrates how to use the **Method of Moments (MoM)** to estimate the parameters of the Negative Binomial Distribution and visualize the results. First, we simulate a sample of size `n = 200` from a Negative Binomial distribution with true parameters \( r = 5 \) (number of successes) and \( p = 0.4 \) (probability of success). The empirical data is stored for further analysis.  
+
+We then compute the **sample mean** \(\bar{Y}\) and **sample variance** \(s^2\). Using the method of moments, we equate these sample moments to the theoretical moments of the Negative Binomial distribution:  
+
+- Theoretical mean:  
+\[
+E[Y] = \frac{r(1-p)}{p}
+\]  
+
+- Theoretical variance:  
+\[
+Var(Y) = \frac{r(1-p)}{p^2}
+\]  
+
+From these two relationships, the method of moments estimators are derived as:  
+
+\[
+\hat{p} = \frac{\bar{Y}}{s^2}, \quad \hat{r} = \frac{\bar{Y}^2}{s^2 - \bar{Y}}
+\]  
+
+Next, using the MoM estimates \( \hat{p} \) and \( \hat{r} \), the code calculates the **expected value**, **median**, and **mode** of the fitted Negative Binomial distribution:  
+
+- Mean:  
+\[
+\hat{\mu} = \frac{\hat{r}(1 - \hat{p})}{\hat{p}}
+\]  
+
+- Median: approximated numerically with the quantile function `qnbinom(0.5, size = r_mom, prob = p_mom)`.  
+
+- Mode:  
+\[
+\hat{m} = \left\lfloor \frac{(\hat{r} - 1)(1 - \hat{p})}{\hat{p}} \right\rfloor, \quad \text{for } \hat{r} > 1
+\]  
+
+Finally, the code visualizes the empirical histogram of the simulated data alongside both the **MoM-estimated distribution** and the **true theoretical distribution**. The histogram is filled in light blue, while:  
+
+- The **mean** is drawn in **red (dashed line)**.  
+- The **median** is drawn in **blue (dashed line)**.  
+- The **mode** mode is drawn in **black (dashed line)** derived from the estimates.  
+
+This visualization allows us to compare the empirical data, the fitted distribution from the method of moments, and the underlying true distribution. It highlights how the MoM approach approximates the central tendency of the Negative Binomial Distribution using only the first two sample moments.  
+
+
+```{r setup, warning = FALSE, message = FALSE}
+# Load libraries
+library(ggplot2)
+library(dplyr)
+
+set.seed(123)
+
+# ---- Step 1: Simulate empirical data from a Negative Binomial distribution ----
+r_true <- 5        # true number of successes
+p_true <- 0.4      # true probability of success
+n <- 200           # sample size
+
+data_nb <- rnbinom(n, size = r_true, prob = p_true)
+
+# ---- Step 2: Calculate sample moments ----
+sample_mean <- mean(data_nb)
+sample_var  <- var(data_nb)
+
+# Method of Moments Estimators:
+p_mom <- sample_mean / sample_var
+r_mom <- sample_mean^2 / (sample_var - sample_mean)
+
+# ---- Step 3: Compute mean, median, mode using MoM estimates ----
+# Theoretical mean of NB
+mean_mom <- r_mom * (1 - p_mom) / p_mom
+
+# Median of NB is not closed-form -> approximate numerically
+median_mom <- qnbinom(0.5, size = r_mom, prob = p_mom)
+
+# Mode of NB: floor((r - 1) * (1 - p) / p), valid for r > 1
+mode_mom <- ifelse(r_mom > 1, floor((r_mom - 1) * (1 - p_mom) / p_mom), NA)
+
+# Print results
+cat("Sample Mean:", sample_mean, "\n")
+cat("Sample Variance:", sample_var, "\n")
+cat("MoM Estimate of p:", round(p_mom, 3), "\n")
+cat("MoM Estimate of r:", round(r_mom, 3), "\n")
+cat("Estimated Mean (MoM):", round(mean_mom, 2), "\n")
+cat("Estimated Median (MoM):", median_mom, "\n")
+cat("Estimated Mode (MoM):", mode_mom, "\n")
+
+# ---- Step 4: Visualization ----
+df <- data.frame(values = data_nb)
+
+
+ggplot(df, aes(x = values)) +
+  geom_histogram(aes(y = ..density..), 
+                 binwidth = 1, 
+                 fill = "lightblue", 
+                 color = "black") +
+  geom_vline(xintercept = mean_mom, color = "red", size = 1.2, linetype = "dotted") +
+  geom_vline(xintercept = median_mom, color = "blue", size = 1.2, linetype = "dotted") +
+  geom_vline(xintercept = mode_mom, color = "black", size = 1.2, linetype = "dotted") +
+  labs(title = "Negative Binomial Distribution - Method of Moments Fit",
+       subtitle = "Vertical Lines: Mean (Red), Median (Blue), Mode (Black)",
+       x = "Counts (Number of Failures until r successes)",
+       y = "Density") +
+  theme_minimal(base_size = 14)
+
+```

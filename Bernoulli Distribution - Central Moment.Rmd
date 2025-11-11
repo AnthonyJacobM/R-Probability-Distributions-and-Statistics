@@ -1,0 +1,135 @@
+---
+title: 'Bernoulli Distribution: Central Moment'
+author: "Anthony Morciglio"
+date: "2025-08-27"
+output: html_document
+---
+```
+
+The selected R code provides a practical and visual demonstration of the analytical concepts behind the Bernoulli distribution. At its core, the Bernoulli distribution is a simple model for a single trial with two outcomes, defined by the probability of success, p. The `calculate_central_moment` function in the Canvas directly translates the mathematical formula for central moments into code, allowing you to compute these values for any given p and moment order k. Furthermore, the included plots go beyond simple calculation: the `plot_pmf` function graphically illustrates the probability mass at the two outcomes, while the `plot_moments` function visualizes how key analytical properties like the mean and variance change as a continuous function of the parameter p, reinforcing the theoretical principles with a clear visual representation.
+
+```{r setup}
+# --- Required Libraries ---
+# Install these packages if you haven't already
+# install.packages("ggplot2")
+# install.packages("dplyr")
+
+# Load the required libraries for plotting and data manipulation
+library(ggplot2)
+library(dplyr)
+
+# --- Function to Calculate the Central Moment of a Bernoulli Distribution ---
+#
+# This function calculates the k-th central moment for a Bernoulli distribution
+# with a given probability of success 'p'.
+#
+# Args:
+#   p: The probability of success (0 <= p <= 1).
+#   k: The order of the central moment (k is a positive integer).
+#
+# Returns:
+#   The value of the k-th central moment.
+#
+calculate_central_moment <- function(p, k) {
+  # The formula for the k-th central moment is E[(Y-p)^k]
+  # For a Bernoulli distribution, Y can be 0 or 1.
+  # So, E[(Y-p)^k] = P(Y=0) * (0-p)^k + P(Y=1) * (1-p)^k
+  #                = (1-p) * (-p)^k + p * (1-p)^k
+  
+  # Input validation
+  if (p < 0 || p > 1) {
+    stop("Probability 'p' must be between 0 and 1.")
+  }
+  if (k < 1 || floor(k) != k) {
+    stop("Order 'k' must be a positive integer.")
+  }
+  
+  moment <- (1 - p) * (-p)^k + p * (1 - p)^k
+  return(moment)
+}
+
+# --- Examples of Usage ---
+# Calculate the first central moment (should be 0)
+first_moment <- calculate_central_moment(p = 0.5, k = 1)
+cat("First central moment for p=0.5:", first_moment, "\n")
+
+# Calculate the second central moment (variance)
+variance_val <- calculate_central_moment(p = 0.5, k = 2)
+cat("Variance for p=0.5:", variance_val, "\n")
+cat("Using standard formula p*(1-p):", 0.5 * (1 - 0.5), "\n")
+
+# Calculate the third central moment
+third_moment <- calculate_central_moment(p = 0.5, k = 3)
+cat("Third central moment for p=0.5:", third_moment, "\n")
+
+# --- Visualizing the Bernoulli Distribution's PMF ---
+#
+# This plot shows the probability mass function (PMF) for a Bernoulli distribution.
+# It helps to visualize the two possible outcomes and their probabilities.
+#
+plot_pmf <- function(p) {
+  data_pmf <- data.frame(
+    outcome = factor(c("Failure (0)", "Success (1)"), levels = c("Failure (0)", "Success (1)")),
+    probability = c(1 - p, p)
+  )
+  
+  ggplot(data_pmf, aes(x = outcome, y = probability, fill = outcome)) +
+    geom_bar(stat = "identity", width = 0.5, color = "white") +
+    geom_text(aes(label = round(probability, 2)), vjust = -0.5, size = 5) +
+    scale_fill_manual(values = c("Failure (0)" = "#f87171", "Success (1)" = "#4ade80")) +
+    labs(
+      title = paste("Bernoulli Distribution PMF (p =", p, ")"),
+      x = "Outcome",
+      y = "Probability",
+      fill = "Outcome"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5, face = "bold"),
+      legend.position = "none"
+    )
+}
+
+# Generate and display a PMF plot for p = 0.7
+plot_pmf(p = 0.7)
+
+# --- Visualizing Moments as a function of 'p' ---
+#
+# This plot shows how the variance (2nd central moment) changes as the
+# probability of success 'p' varies from 0 to 1.
+# The variance is p*(1-p), which is maximized at p=0.5.
+#
+plot_moments <- function() {
+  p_values <- seq(0, 1, by = 0.01)
+  
+  # Calculate the mean and variance for each 'p' value
+  moment_data <- data.frame(
+    p = p_values,
+    mean = p_values,
+    variance = p_values * (1 - p_values)
+  )
+  
+  ggplot(moment_data, aes(x = p)) +
+    # Plot the mean
+    geom_line(aes(y = mean, color = "Mean"), size = 1.2) +
+    # Plot the variance
+    geom_line(aes(y = variance, color = "Variance"), size = 1.2) +
+    # Add a point at the peak of the variance curve
+    geom_point(data = filter(moment_data, p == 0.5), aes(y = variance, color = "Variance"), size = 4) +
+    geom_text(data = filter(moment_data, p == 0.5), aes(y = variance, label = "Max Variance"),
+              vjust = -1, hjust = -0.1, size = 4) +
+    scale_color_manual(values = c("Mean" = "#3b82f6", "Variance" = "#16a34a")) +
+    labs(
+      title = "Mean and Variance vs. Probability (p)",
+      x = "Probability of Success (p)",
+      y = "Value",
+      color = "Statistic"
+    ) +
+    theme_minimal() +
+    theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+}
+
+# Generate and display the moments plot
+plot_moments()
+```
+

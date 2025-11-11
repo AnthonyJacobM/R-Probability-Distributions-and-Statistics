@@ -1,0 +1,66 @@
+---
+title: "Moment Generating Function - Geometric and Exponential Distributions"
+author: "Anthony Morciglio"
+date: "09/06/2025"
+output: html_document
+---
+
+## Visualizing the Convergence of the Geometric Distribution's Moment Generating Function to the Exponential Distribution
+
+The Moment Generating Function (MGF) of the Geometric distribution converges to that of the Exponential distribution in the asymptotic limit, when the discrete step size becomes very small. This convergence illustrates how the Exponential distribution can be viewed as the continuous analogue of the Geometric distribution. In the R code provided above, we plot the MGFs of the rescaled Geometric distribution for several values of the discretization parameter $\delta$. The function geom_mgf computes the MGF for the Geometric case, while exp_mgf computes the closed-form MGF of the Exponential distribution. Using ggplot2, we plot the Geometric MGFs in a color gradient from red (larger δ, farther from continuous) to blue (smaller $\delta$, closer to continuous), and overlay the Exponential MGF as a dashed black line. The plot shows that as 
+$\delta \rightarrow 0$, the Geometric MGFs approach the Exponential curve, confirming convergence visually.
+
+```{r setup, warning = FALSE, message = FALSE}
+# Load libraries
+library(ggplot2)
+
+# Geometric MGF for scaled variable Z_delta
+mgf_geom <- function(t, lambda, delta) {
+  (lambda * delta * exp(delta * t)) / (1 - (1 - lambda * delta) * exp(delta * t))
+}
+
+# Exponential MGF
+mgf_exp <- function(t, lambda) {
+  lambda / (lambda - t)
+}
+
+# Parameters
+lambda <- 1
+t_vals <- seq(-2, 0.9, length.out = 200)  # valid range for mgf
+
+# Different delta values (smaller delta -> closer to continuous limit)
+delta_vals <- c(0.5, 0.2, 0.1, 0.05, 0.01)
+
+# Generate data
+df <- data.frame()
+for (d in delta_vals) {
+  df <- rbind(df, 
+              data.frame(
+                t = t_vals,
+                mgf = mgf_geom(t_vals, lambda, d),
+                delta = as.factor(d)
+              ))
+}
+
+# Add Exponential MGF
+df_exp <- data.frame(
+  t = t_vals,
+  mgf = mgf_exp(t_vals, lambda)
+)
+
+# Plot
+ggplot() +
+  geom_line(data = df, aes(x = t, y = mgf, color = delta, group = delta), size = 1.2) +
+  geom_line(data = df_exp, aes(x = t, y = mgf), 
+            color = "black", linetype = "dashed", size = 1.2) +
+  scale_color_manual(values = colorRampPalette(c("red", "blue"))(length(delta_vals))) +
+  labs(
+    title = "Convergence of Geometric MGF to Exponential MGF",
+    subtitle = "Geometric MGF approaches Exponential MGF as δ → 0",
+    x = "t",
+    y = "MGF",
+    color = "δ"
+  ) +
+  theme_minimal(base_size = 14)
+```
+

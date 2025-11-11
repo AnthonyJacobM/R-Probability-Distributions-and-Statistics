@@ -1,0 +1,72 @@
+---
+title: "Negative Binomial Distribution"
+author: "Anthony Morciglio"
+date: "09/14/2025"
+output: html_document
+---
+
+## Developing Intution for the Negative Binomial Distribution
+
+This R code illustrates the Negative Binomial Distribution by computing and visualizing both the probability mass function (PMF) and the cumulative distribution function (CDF). The distribution is parameterized with r  = 5 successes and a probability of success p = 0.7, modeling the number of failures before achieving r non-defective items. The script first calculates the theoretical mean and variance, then generates sequences of PMF and CDF values across possible failure counts. Using ggplot2, two plots are created: the PMF, shown as a bar plot, and the CDF, shown as a line plot. In both plots, the mean is displayed as a red dashed vertical line, and the median (calculated as the smallest value where the CDF exceeds 0.5) is displayed as a black dotted vertical line. Labels and annotations highlight these key measures of central tendency. Together, the code provides both a numerical and graphical interpretation of the Negative Binomial Distribution, offering insight into its shape, location, and cumulative behavior.
+
+
+```{r setup, warning = FALSE, message = FALSE}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+
+# Parameters for Negative Binomial example
+# Suppose: r = 5 successful (non-defective) items needed
+# p = probability of success = 0.7 (70% chance item is non-defective)
+r <- 5
+p <- 0.7
+
+# Mean and variance for reference
+mean_nb <- r * (1 - p) / p
+var_nb  <- r * (1 - p) / (p^2)
+
+# Create a range of possible failures before r successes
+x_vals <- 0:20  # number of failures before reaching r successes
+
+# Density (PMF) values
+pmf_vals <- dnbinom(x_vals, size = r, prob = p)
+
+# Distribution (CDF) values
+cdf_vals <- pnbinom(x_vals, size = r, prob = p)
+
+# Median (approximate: smallest x where CDF >= 0.5)
+median_nb <- min(x_vals[cdf_vals >= 0.5])
+
+# --- Density Plot (PMF) ---
+df_pmf <- data.frame(x = x_vals, pmf = pmf_vals)
+
+pmf_plot <- ggplot(df_pmf, aes(x, pmf)) +
+  geom_col(fill = "skyblue", color = "black") +
+  geom_vline(xintercept = mean_nb, color = "red", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = median_nb, color = "black", linetype = "dotted", size = 1) +
+  annotate("text", x = mean_nb, y = max(pmf_vals), label = paste("Mean =", round(mean_nb, 2)), color = "red", vjust = -0.5) +
+  annotate("text", x = median_nb, y = max(pmf_vals) * 0.9, label = paste("Median =", median_nb), color = "black", vjust = -0.5) +
+  labs(title = "Negative Binomial Distribution (PMF)",
+       x = "Number of Failures Before r Successes",
+       y = "Probability") +
+  theme_minimal()
+
+# --- Distribution Plot (CDF) ---
+df_cdf <- data.frame(x = x_vals, cdf = cdf_vals)
+
+cdf_plot <- ggplot(df_cdf, aes(x, cdf)) +
+  geom_line(color = "blue", size = 1.2) +
+  geom_point(color = "darkblue") +
+  geom_vline(xintercept = mean_nb, color = "red", linetype = "dashed", size = 1) +
+  geom_vline(xintercept = median_nb, color = "black", linetype = "dotted", size = 1) +
+  annotate("text", x = mean_nb, y = 0.1, label = paste("Mean =", round(mean_nb, 2)), color = "red", vjust = -0.5) +
+  annotate("text", x = median_nb, y = 0.3, label = paste("Median =", median_nb), color = "black", vjust = -0.5) +
+  labs(title = "Negative Binomial Distribution (CDF)",
+       x = "Number of Failures Before r Successes",
+       y = "Cumulative Probability") +
+  theme_minimal()
+
+# Display the plots
+print(pmf_plot)
+print(cdf_plot)
+```

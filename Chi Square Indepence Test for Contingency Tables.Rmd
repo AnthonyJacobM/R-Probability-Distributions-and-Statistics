@@ -1,0 +1,140 @@
+---
+title: "Chi Square Independence Test for Contingency Tables"
+author: "Anthony Morciglio"
+date: "10/17/2025"
+output: html_document
+---
+
+## Description of the Simulation Procedure
+
+The simulation of contingency tables in this example is based on the **Chi-Square Test for Independence**, which examines whether two categorical variables are related — in this case, **Ethnicity** and **Preference (Like/Dislike)** for a collared shirt.
+
+To accurately simulate real-world data, the following steps are performed:
+
+1. **Define Parameters**  
+   We begin by specifying:
+   - The total sample size, `N`.  
+   - The set of ethnic groups, `ethnicities`.  
+   - The population proportions for each ethnicity, `pi`.  
+   - The probability of “liking” the product, `p_like`.  
+
+   These parameters represent a realistic marketing survey scenario. For example, `pi` defines how likely each ethnic group is to appear in the sample, while `p_like` defines the common probability that any participant likes the product.
+
+2. **Simulate the Row Totals (Multinomial Sampling)**  
+   We draw the number of respondents per ethnicity using the `rmultinom()` function:
+
+```{r setup, warning = FALSE, message = FALSE, echo = TRUE}
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+library(ggplot2); library(dplyr); library(tidyr)
+
+# Parameters - change these to reflect your scenario
+
+N <- 1000
+ethnicities <- c("White", "Black", "Hispanic", "Asian", "Other")
+pi <- c(0.35, 0.25, 0.20, 0.15, 0.05)   # population proportions (sum = 1)
+p_like <- 0.55                         # homogeneous probability of 'Like'
+set.seed(2025)
+
+# 1) allocate row totals via multinomial
+
+n_row <- as.numeric(rmultinom(1, size = N, prob = pi))   # vector length 5
+
+# 2) for each row, draw likes ~ Binomial(n_i, p_like)
+
+likes <- rbinom(length(n_row), size = n_row, prob = p_like)
+dislikes <- n_row - likes
+
+# Build table (data.frame)
+
+ct <- data.frame(
+Ethnicity = ethnicities,
+n = n_row,
+Like = likes,
+Dislike = dislikes,
+stringsAsFactors = FALSE
+)
+
+ct_long <- ct %>% select(Ethnicity, Like, Dislike) %>%
+pivot_longer(cols = c("Like","Dislike"), names_to = "Preference", values_to = "Count")
+
+print(ct)
+
+# convert to matrix with rows = ethnicities, cols = Like/Dislike
+
+obs_matrix <- as.matrix(ct[, c("Like","Dislike")])
+rownames(obs_matrix) <- ct$Ethnicity
+
+test <- chisq.test(obs_matrix, correct = FALSE)  # no Yates correction for simplicity
+test$statistic
+test$p.value
+test$expected   # expected counts under independence
+
+exp_df <- as.data.frame(test$expected) %>%
+mutate(Ethnicity = rownames(.)) %>%
+pivot_longer(cols = c("Like","Dislike"), names_to = "Preference", values_to = "Expected")
+
+obs_df <- ct_long
+
+merged <- left_join(obs_df, exp_df, by = c("Ethnicity","Preference"))
+
+# Custom color mapping for ethnicities: Red, Orange, Green, Yellow, Blue
+color_order <- c("red", "orange", "green", "yellow", "blue")
+
+ggplot(merged, aes(x = Preference, y = Count, fill = Ethnicity)) +
+  geom_col(position = "dodge", alpha = 0.85, color = "black") +
+  geom_point(aes(y = Expected), position = position_dodge(width = 0.9),
+             color = "black", size = 3, shape = 21, fill = "white") +
+  scale_fill_manual(values = color_order) +
+  labs(
+    title = "Observed vs Expected Counts by Ethnicity (one simulated table)",
+    subtitle = "Bars = observed, Points = expected under homogeneity",
+    y = "Count"
+  ) +
+  theme_minimal(base_size = 13)
+
+# Simple mosaic using ggplot by showing proportion rectangles
+
+prop_df <- merged %>%
+group_by(Ethnicity) %>%
+mutate(RowTotal = sum(Count)) %>%
+ungroup() %>%
+mutate(Prop = Count / sum(Count))
+
+ggplot(prop_df, aes(x = Ethnicity, y = Count, fill = Preference)) +
+geom_bar(stat = "identity", position = "fill") +
+labs(title = "Stacked proportion by Ethnicity (Like vs Dislike)",
+y = "Proportion") +
+theme_minimal(base_size = 13)
+
+R <- 5000   # number of repetitions
+chisq_stats <- numeric(R)
+pvals <- numeric(R)
+
+for (r in seq_len(R)) {
+n_row_r <- as.numeric(rmultinom(1, size = N, prob = pi))
+likes_r <- rbinom(length(n_row_r), size = n_row_r, prob = p_like)
+mat_r <- cbind(likes_r, n_row_r - likes_r)
+res <- suppressWarnings(chisq.test(mat_r, correct = FALSE))
+chisq_stats[r] <- as.numeric(res$statistic)
+pvals[r] <- res$p.value
+}
+
+# Empirical distribution and Type I error at alpha = 0.05
+
+alpha <- 0.05
+emp_type1 <- mean(pvals < alpha)
+
+# Plot histogram of chisq stats and overlay theoretical chi-square density
+
+df_mc <- data.frame(stat = chisq_stats)
+ggplot(df_mc, aes(x = stat)) +
+geom_histogram(aes(y = ..density..), bins = 40, fill = "blue", color = "white") +
+stat_function(fun = dchisq, args = list(df = length(ethnicities) - 1), color = "red", size = 1) +
+labs(title = "Monte Carlo null distribution of Chi-square statistic (R simulations)",
+subtitle = paste0("Empirical Type I error (alpha = ", alpha, "): ", round(emp_type1, 3)),
+x = expression(chi^2), y = "Density") +
+theme_minimal(base_size = 13)
+
+```
+
+

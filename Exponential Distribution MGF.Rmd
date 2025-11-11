@@ -1,0 +1,120 @@
+---
+title: "Exponential Distribution: Moment Generating Function"
+author: "Anthony Morciglio"
+date: "2025-08-22"
+output: html_document
+---
+
+```{r setup, warning = FALSE, message = FALSE, echo = FALSE}
+```
+
+## The Exponential Distribution: Moment Generating Function
+
+The R code generated serves as a dynamic, computational demonstration of the moment generating function's power. While the blog post analytically derives the MGF for the exponential distribution and shows how to use it to find the mean and variance, the R script provides a practical way to see these concepts in action. In this script, we visualize the moment generating function as a function of time, t.  It should be noted that the mean (average) is obtained by taking the derivative of the moment generating function and evaluating at t = 0, which is equivalent to evaluating the slope of the tangent line at t = 0 of the moment generating function graph.  Additionally, there is a vertical asymptote obtained at $t = \lambda$, since the moment generating function is only defined for $t < \lambda$. By numerically approximating the derivatives of the MGF, the code validates the theoretical results, allowing you to observe that the first derivative at $t=0$ indeed yields a slope with the value of the mean ($1/\lambda$) and the second derivative gives the second moment ($2/\lambda^2$). This bridges the gap between the abstract mathematical formulas and their concrete, calculable properties, making the concept of the MGF more tangible.
+
+```{r setup, include=FALSE, warning = FALSE, message = FALSE, echo = FALSE
+knitr::opts_chunk$set(echo = FALSE)
+}
+```
+
+```{r setup}
+library(ggplot2)
+# This R script provides functions to calculate the Moment Generating Function (MGF)
+# for the exponential distribution and uses it to numerically derive the mean and variance.
+
+# -----------------------------------------------------------------------------
+# 1. Define the Moment Generating Function (MGF)
+#    M_X(t) = lambda / (lambda - t)
+# -----------------------------------------------------------------------------
+# @param t The variable t from the MGF formula.
+# @param lambda The rate parameter of the exponential distribution.
+# @return The value of the MGF at a given t.
+mgf_exponential <- function(t, lambda) {
+  # The MGF is undefined for t >= lambda, so we use a guard clause.
+  if (any(t >= lambda)) {
+    warning("MGF is undefined for t >= lambda. Returning NA for those values.")
+  }
+  return(lambda / (lambda - t))
+}
+
+# -----------------------------------------------------------------------------
+# 2. Numerically Approximate the First Derivative (to find the mean)
+#    E(X) = M_X'(0)
+# -----------------------------------------------------------------------------
+# We use a small value 'h' to approximate the derivative using the limit definition:
+# f'(x) approx (f(x + h) - f(x)) / h
+# @param lambda The rate parameter of the exponential distribution.
+# @param h A small value for the numerical approximation.
+# @return The numerical approximation of the mean E(X).
+numerical_mean_from_mgf <- function(lambda, h = 1e-6) {
+  # Apply the numerical derivative formula at t = 0.
+  return((mgf_exponential(0 + h, lambda) - mgf_exponential(0, lambda)) / h)
+}
+
+# -----------------------------------------------------------------------------
+# 3. Numerically Approximate the Second Derivative (to find the second moment)
+#    E(X^2) = M_X''(0)
+# -----------------------------------------------------------------------------
+# We apply the numerical derivative formula to the first derivative.
+# f''(x) approx (f'(x + h) - f'(x)) / h
+# @param lambda The rate parameter of the exponential distribution.
+# @param h A small value for the numerical approximation.
+# @return The numerical approximation of the second moment E(X^2).
+numerical_second_moment_from_mgf <- function(lambda, h = 1e-6) {
+  # First, define a function for the numerical first derivative.
+  mgf_prime <- function(t_val) {
+    return((mgf_exponential(t_val + h, lambda) - mgf_exponential(t_val, lambda)) / h)
+  }
+  
+  # Now, apply the numerical derivative to the prime function at t = 0.
+  return((mgf_prime(0 + h) - mgf_prime(0)) / h)
+}
+
+# -----------------------------------------------------------------------------
+# 4. Demonstrate the calculations with a sample lambda value
+# -----------------------------------------------------------------------------
+# Set a sample lambda value for the plot.
+lambda_val <- 0.5
+
+# Define a range for t. We go from a negative value up to a value just below lambda,
+# to avoid the vertical asymptote.
+t_range <- seq(-5, lambda_val - 0.001, length.out = 1000)
+
+# Create a data frame for the plot.
+mgf_df <- data.frame(
+  t = t_range,
+  mgf_val = mgf_exponential(t_range, lambda = lambda_val)
+)
+
+# Create the ggplot.
+mgf_plot <- ggplot(mgf_df, aes(x = t, y = mgf_val)) +
+  # Add the main MGF curve.
+  geom_line(color = "#4c72b0", linewidth = 1) +
+  # Add a vertical dashed line at t = 0 to show where moments are evaluated.
+  geom_vline(xintercept = 0, linetype = "dashed", color = "#d95f02", linewidth = 1) +
+  # Add a vertical dashed line at t = lambda to show the asymptote.
+  geom_vline(xintercept = lambda_val, linetype = "dotted", color = "gray", linewidth = 1) +
+  # Customize labels and theme.
+  labs(
+    title = "Moment Generating Function (MGF) of the Exponential Distribution",
+    subtitle = paste("for Lambda =", lambda_val),
+    x = expression(t),
+    y = expression(paste("M"[X], "(t)"))
+  ) +
+  # Add annotations for key points.
+  annotate("text", x = 0, y = mgf_exponential(0, lambda_val), label = expression(M[X](0)==1),
+           color = "#d95f02", vjust = -1) +
+  annotate("text", x = lambda_val, y = max(mgf_df$mgf_val, na.rm = TRUE) * 0.9, 
+           label = expression(t==lambda), color = "gray", hjust = 1.1) +
+  # Set y-axis limits to prevent extremely large values from distorting the plot.
+  ylim(c(0, 5)) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5))
+
+# Print the final plot.
+print(mgf_plot)
+
+```
+
+

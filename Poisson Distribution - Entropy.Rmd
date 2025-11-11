@@ -1,0 +1,39 @@
+---
+title: "Poisson Distribution: Entropy"
+author: "Anthony Morciglio"
+date: "09/07/2025"
+output: html_document
+---
+
+## Visualizing the Entropy of the Poisson Distribution
+
+This R script calculates and visualizes the entropy of the Poisson distribution as a function of the rate parameter $\lambda$. The entropy is computed numerically by summing over the distribution’s Probability Mass Function (PMF), quantifying the uncertainty in predicting the number of events within a fixed interval. The script generates a line plot of entropy versus $\lambda$, highlighting how entropy increases as $\lambda$ grows, reflecting greater variability in outcomes. An example point (e.g., $\lambda$ = 3) is emphasized on the plot to show the approximate entropy value for a specific case.
+
+```{r setup, warning = FALSE, message = FALSE}
+# Entropy of Poisson Distribution Visualization
+
+# Function to compute entropy of Poisson
+poisson_entropy <- function(lambda, max_y = 100) {
+  y <- 0:max_y
+  probs <- dpois(y, lambda)
+  entropy <- -sum(probs * log(probs), na.rm = TRUE)
+  return(entropy)
+}
+
+# Compute entropy values for a range of lambda
+lambda_values <- seq(0.5, 20, by = 0.5)
+entropy_values <- sapply(lambda_values, poisson_entropy)
+
+# Plot entropy vs. lambda
+plot(lambda_values, entropy_values, type = "l", lwd = 2, col = "blue",
+     xlab = expression(lambda), ylab = "Entropy (nats)",
+     main = "Entropy of the Poisson Distribution")
+
+# Highlight a specific point, e.g., lambda = 3
+lambda_point <- 3
+entropy_point <- poisson_entropy(lambda_point)
+points(lambda_point, entropy_point, col = "red", pch = 19)
+text(lambda_point, entropy_point + 0.2,
+     labels = paste0("λ = ", lambda_point, "\nH ≈ ", round(entropy_point, 3)),
+     col = "red")
+```

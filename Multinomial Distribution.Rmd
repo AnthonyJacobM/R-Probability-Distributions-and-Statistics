@@ -1,0 +1,96 @@
+---
+title: "Multinomial Distribution"
+author: "Anthony Morciglio"
+date: "10/18/2025"
+output: html_document
+---
+
+```{r setup, warning = FALSE, message = FALSE, echo = TRUE}
+# ==========================================================
+# Exploring the Multinomial Distribution
+# ==========================================================
+# This R Markdown script demonstrates how to simulate,
+# analyze, and visualize data from a multinomial distribution.
+# We model a survey of 100 respondents choosing their favorite
+# color among four options: Red, Blue, Green, and Yellow.
+# ==========================================================
+
+# Load libraries
+library(ggplot2)
+library(reshape2)
+library(MASS)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Parameters
+n <- 100
+p <- c(0.25, 0.35, 0.30, 0.10)
+categories <- c("Red", "Blue", "Green", "Yellow")
+
+# Generate one sample
+sample_counts <- rmultinom(1, size = n, prob = p)
+rownames(sample_counts) <- categories
+sample_counts
+
+# Expected values and variances
+expected_values <- n * p
+variances <- n * p * (1 - p)
+
+# Covariance matrix
+cov_matrix <- matrix(0, nrow = 4, ncol = 4)
+for (i in 1:4) {
+  for (j in 1:4) {
+    if (i == j) {
+      cov_matrix[i, j] <- n * p[i] * (1 - p[i])
+    } else {
+      cov_matrix[i, j] <- -n * p[i] * p[j]
+    }
+  }
+}
+rownames(cov_matrix) <- colnames(cov_matrix) <- categories
+
+# Display results
+expected_values
+variances
+cov_matrix
+
+# Simulate many samples
+n_sim <- 10000
+sim_data <- t(rmultinom(n_sim, size = n, prob = p))
+colnames(sim_data) <- categories
+sim_df <- as.data.frame(sim_data)
+head(sim_df)
+
+# Mean counts
+mean_counts <- colMeans(sim_df)
+
+# Combine data
+plot_df <- data.frame(
+  Category = categories,
+  MeanCount = mean_counts,
+  Expected = expected_values
+)
+
+# Plot mean simulated counts vs expected values
+ggplot(plot_df, aes(x = Category, y = MeanCount, fill = Category)) +
+  geom_bar(stat = "identity", color = "black", alpha = 0.8) +
+  geom_point(aes(y = Expected), color = "black", size = 3, shape = 17) +
+  geom_text(aes(y = Expected + 1, label = paste("E[Y] =", round(Expected, 1))), size = 3.5) +
+  labs(title = "Mean Simulated Counts vs. Expected Values",
+       y = "Mean Count (across simulations)",
+       x = "Color Category") +
+  scale_fill_manual(values = c("blue", "green", "red", "gold")) +
+  theme_minimal()
+
+# Correlation heatmap
+cor_matrix <- cor(sim_df)
+melted_cor <- melt(cor_matrix)
+ggplot(melted_cor, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = sprintf("%.2f", value)), color = "black", size = 3) +
+  scale_fill_gradient2(low = "red", high = "blue", mid = "white", midpoint = 0) +
+  labs(title = "Correlation Between Category Counts (Multinomial Simulation)",
+       x = "", y = "") +
+  theme_minimal()
+```

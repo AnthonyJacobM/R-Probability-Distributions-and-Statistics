@@ -1,0 +1,138 @@
+---
+title: "Uniform Distribution - Measures of Central Tendency and Spread"
+author: "Anthony Morciglio"
+date: "2025-08-30"
+output: html_document
+---
+
+## Visualizing the Measures of Spread and Central Tendency
+
+The R script is a comprehensive tool for analyzing the Discrete Uniform Distribution. It begins by defining the parameters of a fair eight-sided die, which serves as the core example. The code then systematically calculates and displays the key descriptive statistics: median, mean, and variance. A series of `ggplot2` plots visually complements these numerical results. The first plot displays the Probability Mass Function (PMF) as a bar chart, highlighting the measures of central tendency (mean and median) with a green line. The second plot shows the Cumulative Distribution Function (CDF) as a step function. Finally, a third plot demonstrates the relationship between the number of outcomes, `N`, and the variance, a quadratic relationship that is a core property of this distribution.
+
+
+```{r setup, warning = FALSE, message = FALSE}
+# This R script calculates the key moments (median, mean, variance, and IQR)
+# for a Discrete Uniform Distribution, using the example of a fair eight-sided die.
+# It also includes plots to visualize these concepts.
+
+# Install and load the ggplot2 library for plotting
+if (!require("ggplot2")) {
+  install.packages("ggplot2")
+  library(ggplot2)
+}
+
+# --- Parameters of the Example ---
+# The outcomes of a fair eight-sided die are integers from 1 to 8.
+a <- 1
+b <- 8
+outcomes <- a:b
+
+# Total number of possible outcomes
+N <- b - a + 1
+
+# --- 1. Median Calculation ---
+median_value <- (a + b) / 2
+
+# --- 2. Mean (Expected Value) Calculation ---
+mean_value <- (a + b) / 2
+
+# --- 3. Variance Calculation ---
+variance_value <- (N^2 - 1) / 12
+std_dev <- sqrt(variance_value)
+
+# --- 4. Interquartile Range (IQR) Calculation ---
+q1_pos <- ceiling(N / 4)
+q3_pos <- ceiling(3 * N / 4)
+q1_value <- outcomes[q1_pos]
+q3_value <- outcomes[q3_pos]
+iqr_value <- q3_value - q1_value
+
+# Create a data frame for plotting
+plot_data <- data.frame(
+  k = outcomes,
+  pmf = rep(1/N, N),
+  cdf = (outcomes - a + 1) / N
+)
+
+# --- PMF Plot ---
+# This plot shows the probability of each outcome and visualizes the mean and median.
+pmf_plot <- ggplot(plot_data, aes(x = k, y = pmf)) +
+  geom_bar(stat = "identity", fill = "lightblue", color = "black") +
+  # Highlight the mean and median (which are the same for this distribution)
+  geom_vline(xintercept = mean_value, color = "darkgreen", linetype = "solid", size = 1) +
+  geom_text(aes(label = round(pmf, 3)), vjust = -0.5, size = 4) +
+  annotate("text", x = mean_value * 0.75, y = max(plot_data$pmf) * 1.15, label = "Mean = Median", color = "darkgreen", size = 4, fontface = "bold") +
+  labs(
+    title = "Discrete Uniform Distribution PMF (n = 8)",
+    x = "Outcome (k)",
+    y = "Probability P(Y = k)"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(breaks = outcomes) +
+  ylim(0, max(plot_data$pmf) * 1.3)
+
+# --- CDF Plot ---
+# This plot shows the cumulative probability of each outcome and highlights the IQR.
+cdf_plot <- ggplot(plot_data, aes(x = k, y = cdf)) +
+  geom_bar(stat = "identity", fill = "darkblue", color = "black") +
+  # Highlight the mean and median (which are the same for this distribution)
+  geom_vline(xintercept = mean_value, color = "darkgreen", linetype = "solid", size = 1) +
+  geom_text(aes(label = round(cdf, 3)), vjust = -0.5, size = 4) +
+  annotate("text", x = mean_value * 0.75, y = max(plot_data$cdf) * 1.15, label = "Mean = Median", color = "darkgreen", size = 4, fontface = "bold") +
+  labs(
+    title = "Discrete Uniform Distribution CDF (n = 8)",
+    x = "Outcome (k)",
+    y = "Probability P(Y = k)"
+  ) +
+  theme_minimal() +
+  scale_x_continuous(breaks = outcomes) +
+  ylim(0, max(plot_data$cdf) * 1.3)
+
+# --- New Plot: Variance vs. N ---
+# This plot shows how the variance changes as the number of outcomes (N) increases.
+# Generate a range of N values
+N_range <- 2:50
+variance_data <- data.frame(
+  N = N_range,
+  variance = (N_range^2 - 1) / 12
+)
+
+variance_plot <- ggplot(variance_data, aes(x = N, y = variance)) +
+  geom_line(color = "purple", size = 1.2) +
+  geom_point(color = "purple", size = 2) +
+  labs(
+    title = "Variance as a Function of N",
+    x = "Number of Outcomes (N)",
+    y = "Variance"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+# --- Output the results and plots ---
+cat("--- Discrete Uniform Distribution Parameters ---\n")
+cat(paste("Range of outcomes: [", a, ", ", b, "]\n", sep=""))
+cat(paste("Total number of outcomes (N):", N, "\n\n"))
+
+cat("--- Median Calculation ---\n")
+cat(paste("Formula: (a + b) / 2\n"))
+cat(paste("Result: (", a, " + ", b, ") / 2 = ", median_value, "\n\n", sep=""))
+
+cat("--- Mean (Expected Value) Calculation ---\n")
+cat(paste("Formula: (a + b) / 2\n"))
+cat(paste("Result: (", a, " + ", b, ") / 2 = ", mean_value, "\n\n", sep=""))
+
+cat("--- Variance Calculation ---\n")
+cat(paste("Formula: (N^2 - 1) / 12\n"))
+cat(paste("Result: (", N, "^2 - 1) / 12 = ", variance_value, "\n\n", sep=""))
+
+cat("--- Interquartile Range (IQR) Calculation ---\n")
+cat(paste("First Quartile (Q1) is at position:", q1_pos, "with value:", q1_value, "\n"))
+cat(paste("Third Quartile (Q3) is at position:", q3_pos, "with value:", q3_value, "\n"))
+cat(paste("Formula: Q3 - Q1\n"))
+cat(paste("Result: ", q3_value, " - ", q1_value, " = ", iqr_value, "\n\n", sep=""))
+
+print(pmf_plot)
+print(cdf_plot)
+print(variance_plot)
+
+```

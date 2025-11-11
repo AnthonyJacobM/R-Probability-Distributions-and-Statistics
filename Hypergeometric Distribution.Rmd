@@ -1,0 +1,89 @@
+---
+title: "Hypergeometric Distribution"
+author: "Anthony Morciglio"
+date: "10/26/2025"
+output: html_document
+---
+
+## Exploring the Hypergeometric Distribution - Sampling without Replacement
+In this section, we explore the Hypergeometric distribution using an illustrative classroom example.
+The Hypergeometric distribution models the probability of obtaining a certain number of “successes” when drawing samples without replacement from a finite population that contains a known number of successes and failures.
+
+Example Context:
+A class has a total of 𝑁 = 30
+N=30 students, of which 𝐾 = 8
+K=8 students completed a special assignment.
+The instructor randomly selects 𝑛 = 5
+n=5 students for an oral quiz.
+We are interested in determining the probability that exactly  k = 2 of those selected students completed the assignment.
+
+```{r confidence-interval-t, echo=TRUE, message=FALSE, warning=FALSE}
+# --- Hypergeometric Distribution Example (Classroom Problem) ---
+
+# Parameters
+N <- 30   # total population (students)
+K <- 8    # number of "successes" (completed assignment)
+n <- 5    # sample size (students chosen)
+
+# Support (possible values of X)
+k_values <- 0:n
+
+# Compute PMF: P(X = k)
+pmf <- dhyper(k_values, K, N - K, n)
+
+# Compute CDF: P(X ≤ k)
+cdf <- phyper(k_values, K, N - K, n)
+
+# Specific example: P(X = 2)
+P_X_eq_2 <- dhyper(2, K, N - K, n)
+
+# Mean and variance (theoretical)
+mean_X <- n * (K / N)
+var_X <- n * (K / N) * (1 - K / N) * ((N - n) / (N - 1))
+
+# Display summary
+cat("Hypergeometric Example Summary:\n")
+cat(sprintf("E[X] = %.3f\nVar[X] = %.3f\nP(X = 2) = %.4f\n\n", mean_X, var_X, P_X_eq_2))
+
+# Create data frame for visualization
+library(ggplot2)
+df <- data.frame(k = k_values, PMF = pmf, CDF = cdf)
+
+# Plot PMF
+p1 <- ggplot(df, aes(x = factor(k), y = PMF)) +
+  geom_bar(stat = "identity", fill = ifelse(df$k == 2, "#e74c3c", "skyblue"), alpha = 0.7) +
+  geom_text(aes(label = sprintf("%.3f", PMF)), vjust = -0.5, size = 3.5) +
+  labs(title = "Hypergeometric PMF: P(X = k)",
+       subtitle = paste0("N = ", N, ", K = ", K, ", n = ", n, "  |  Highlighted: P(X=2)"),
+       x = "Number of Students Who Completed Assignment (k)",
+       y = "Probability") +
+  theme_minimal(base_size = 13)
+
+# Plot CDF
+p2 <- ggplot(df, aes(x = k, y = CDF)) +
+  geom_line(color = "#2ecc71", linewidth = 1.2) +
+  geom_point(size = 3, color = "#2ecc71") +
+  labs(title = "Hypergeometric CDF: F(X ≤ k)",
+       x = "k", y = "Cumulative Probability") +
+  theme_minimal(base_size = 13)
+
+# Compare Hypergeometric to Binomial Approximation
+p_hyper <- dhyper(k_values, K, N - K, n)
+p_binom <- dbinom(k_values, size = n, prob = K / N)
+df_compare <- data.frame(k = k_values, Hypergeom = p_hyper, Binomial = p_binom)
+
+p3 <- ggplot(df_compare, aes(x = k)) +
+  geom_line(aes(y = Hypergeom, color = "Hypergeometric"), linewidth = 1.2) +
+  geom_point(aes(y = Hypergeom, color = "Hypergeometric"), size = 2) +
+  geom_line(aes(y = Binomial, color = "Binomial Approximation"), linetype = "dashed", linewidth = 1.2) +
+  labs(title = "Comparison: Hypergeometric vs Binomial Approximation",
+       x = "k", y = "Probability") +
+  scale_color_manual(values = c("Hypergeometric" = "skyblue", "Binomial Approximation" = "#ff7f0e")) +
+  theme_minimal(base_size = 13) +
+  theme(legend.title = element_blank())
+
+# Display plots
+library(gridExtra)
+grid.arrange(p1, p2, p3, ncol = 1)
+
+```

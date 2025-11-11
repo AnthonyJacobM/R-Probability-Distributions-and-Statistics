@@ -1,0 +1,181 @@
+---
+title: "Exponential Distribution nth Moment"
+author: "Anthony Morciglio"
+date: "2025-08-22"
+output: html_document
+---
+
+```{r setup, warning = FALSE, message = FALSE, echo = FALSE, include = FALSE}
+```
+
+## The Exponential Distribution: An Experiment
+
+This R script serves as a visual companion to the blog post [Anthony's Educational Blog](https://anthonys-educational-blog.weebly.com/home/the-power-of-moments-unlocking-the-exponential-distributions-secrets), translating the analytical derivations of the exponential distribution's moments into intuitive graphs. It generates four key plots: the probability density function (PDF) and the cumulative distribution function (CDF) for a specific lambda value, visually highlighting the range of one standard deviation (in blue) around the mean (in orange). The script then plots the relationship between the lambda parameter and both the mean and the standard deviation, demonstrating how these core statistical properties — which are directly derived from the nth moment formula — change as the distribution's rate changes. In essence, the code provides a dynamic, graphical representation of the same mathematical concepts you described in the blog post, making the abstract relationships tangible and easier to understand.
+
+```{r setup, include = FALSE, warning = FALSE, message = FALSE, echo = FALSE
+knitr::opts_chunk$set(echo = FALSE)
+}
+```
+
+```{r setup, warning = FALSE, echo = FALSE}
+# This script generates four plots related to the exponential distribution:
+# 1. Probability Density Function (PDF) with a shaded area representing the mean +/- one standard deviation.
+# 2. Cumulative Distribution Function (CDF) with the same shaded region.
+# 3. A plot of the mean (E(X)) vs. the lambda parameter.
+# 4. A plot of the standard deviation (SD) vs. the lambda parameter.
+
+# Required Libraries:
+# ggplot2 for creating high-quality, professional plots.
+# patchwork for combining multiple ggplot2 plots into a single layout.
+# dplyr for data manipulation.
+
+# Check if libraries are installed, if not, install them.
+if (!requireNamespace("ggplot2", quietly = TRUE)) {
+  install.packages("ggplot2")
+}
+if (!requireNamespace("patchwork", quietly = TRUE)) {
+  install.packages("patchwork")
+}
+if (!requireNamespace("dplyr", quietly = TRUE)) {
+  install.packages("dplyr")
+}
+
+# Load the libraries
+library(ggplot2)
+library(patchwork)
+library(dplyr)
+
+# -----------------------------------------------------------------------------
+# Define parameters for the PDF and CDF plots
+# -----------------------------------------------------------------------------
+# Choose a lambda value for the first two plots.
+lambda_val <- 0.5
+# Calculate the theoretical mean and standard deviation.
+mean_val <- 1 / lambda_val
+sd_val <- 1 / lambda_val
+# Define the x-axis range for the PDF and CDF plots.
+x_range <- seq(0, 5 * mean_val, length.out = 1000)
+
+# -----------------------------------------------------------------------------
+# Plot 1: PDF with shaded region
+# -----------------------------------------------------------------------------
+# Create a data frame for the PDF curve.
+pdf_df <- data.frame(x = x_range, y = dexp(x_range, rate = lambda_val))
+# Create a data frame for the shaded area (mean +/- 1 SD).
+shaded_df <- filter(pdf_df, x >= mean_val - sd_val, x <= mean_val + sd_val)
+
+pdf_plot <- ggplot(pdf_df, aes(x, y)) +
+  # Add the main PDF curve.
+  geom_line(color = "#4c72b0", linewidth = 1) +
+  # Add the shaded area.
+  geom_ribbon(data = shaded_df, aes(ymin = 0, ymax = y), fill = "#e0eaf6", alpha = 0.8) +
+  # Add a vertical line to mark the mean.
+  geom_vline(xintercept = mean_val, linetype = "dashed", color = "#d95f02", linewidth = 1) +
+  # Customize labels and theme.
+  labs(
+    title = "Probability Density Function (PDF)",
+    subtitle = bquote(lambda == .(lambda_val)),
+    x = "X",
+    y = "f(x)"
+  ) +
+  # Add annotation for the mean and shaded area.
+  annotate("text", x = mean_val + 2, y = 0.35, label = paste("Mean =", mean_val),
+           color = "#d95f02", vjust = -1) +
+  annotate("text", x = mean_val, y = dexp(mean_val, rate = lambda_val) / 2, 
+           label = "Mean ± 1 SD", color = "#4c72b0", vjust = 1) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5))
+
+# -----------------------------------------------------------------------------
+# Plot 2: CDF with shaded region
+# -----------------------------------------------------------------------------
+# Create a data frame for the CDF curve.
+cdf_df <- data.frame(x = x_range, y = pexp(x_range, rate = lambda_val))
+# Create a data frame for the shaded area (mean +/- 1 SD) under the curve.
+shaded_cdf_df <- filter(cdf_df, x >= mean_val - sd_val, x <= mean_val + sd_val)
+
+cdf_plot <- ggplot(cdf_df, aes(x, y)) +
+  # Add the main CDF curve.
+  geom_line(color = "#4c72b0", linewidth = 1) +
+  # Add the shaded area.
+  geom_ribbon(data = shaded_cdf_df, aes(ymin = 0, ymax = y), fill = "#e0eaf6", alpha = 0.8) +
+  # Add a vertical line for the mean.
+  geom_vline(xintercept = mean_val, linetype = "dashed", color = "#d95f02", linewidth = 1) +
+  # Customize labels and theme.
+  labs(
+    title = "Cumulative Distribution Function (CDF)",
+    subtitle = bquote(lambda == .(lambda_val)),
+    x = "X",
+    y = "F(x)"
+  ) +
+  # Add annotation for the mean and shaded area.
+  annotate("text", x = mean_val, y = 0.5, label = paste("Mean =", mean_val),
+           color = "#d95f02", vjust = -1) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5))
+
+# -----------------------------------------------------------------------------
+# Plot 3: Mean vs. Lambda
+# -----------------------------------------------------------------------------
+# Define a range of lambda values for the plot.
+lambda_range <- seq(0.1, 2.0, length.out = 100)
+# Create a data frame for the plot.
+mean_df <- data.frame(
+  lambda = lambda_range,
+  mean_val = 1 / lambda_range
+)
+
+mean_plot <- ggplot(mean_df, aes(x = lambda, y = mean_val)) +
+  # Add the line representing the relationship.
+  geom_line(color = "#4c72b0", linewidth = 1) +
+  # Customize labels and theme.
+  labs(
+    title = "Mean vs. Lambda",
+    x = expression(paste("Lambda ", (lambda))),
+    y = expression(paste("Mean ", (E(X) == 1/lambda)))
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+# -----------------------------------------------------------------------------
+# Plot 4: Standard Deviation vs. Lambda
+# -----------------------------------------------------------------------------
+# Define a range of lambda values for the plot.
+# We'll use the same lambda_range as the mean plot for consistency.
+sd_df <- data.frame(
+  lambda = lambda_range,
+  sd_val = 1 / lambda_range
+)
+
+sd_plot <- ggplot(sd_df, aes(x = lambda, y = sd_val)) +
+  # Add the line representing the relationship.
+  geom_line(color = "#4c72b0", linewidth = 1) +
+  # Customize labels and theme.
+  labs(
+    title = "Standard Deviation vs. Lambda",
+    x = expression(paste("Lambda ", (lambda))),
+    y = expression(paste("Standard Deviation ", (sigma == 1/lambda)))
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+# -----------------------------------------------------------------------------
+# Combine and display all four plots using patchwork
+# -----------------------------------------------------------------------------
+# Arrange the plots in a 2x2 grid.
+combined_plots <- (pdf_plot + cdf_plot) / (mean_plot + sd_plot)
+
+# Add an overall title to the combined plots.
+combined_plots <- combined_plots + 
+  plot_annotation(
+    title = "Key Properties of the Exponential Distribution",
+    theme = theme(plot.title = element_text(size = 20, face = "bold", hjust = 0.5))
+  )
+
+# Print the final combined plot.
+print(combined_plots)
+```
+
+

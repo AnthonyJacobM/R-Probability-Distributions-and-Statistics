@@ -1,0 +1,81 @@
+---
+title: "Hypothesis Testing for Population Variance"
+author: "Anthony Morciglio"
+date: "10/27/2025"
+output: html_document
+---
+
+### Demonstration: Chi-Square Test for Population Variance in R
+
+In this section, we demonstrate how to perform a **hypothesis test for the population variance** using the **Chi-Square distribution**.  
+
+We use the example from the blog post, where we test whether the population variance of metal rod lengths is greater than \( \sigma_0^2 = 0.04 \) based on a sample variance of \( s^2 = 0.10 \) from \( n = 10 \) samples, at a significance level of \( \alpha = 0.05 \).  
+
+The code below:
+1. Computes the Chi-Square test statistic.  
+2. Determines the critical value and p-value for the right-tailed test.  
+3. Visualizes the Chi-Square distribution with the rejection region shaded and the test statistic marked.  
+4. Provides a conclusion based on the comparison between the test statistic and critical value.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# --- Chi-Square Test for Population Variance ---
+
+# Given data
+n <- 10                  # sample size
+s2 <- 0.10               # sample variance
+sigma0_sq <- 0.04        # hypothesized population variance
+alpha <- 0.05            # significance level
+
+# Compute the test statistic
+chi_sq <- (n - 1) * s2 / sigma0_sq
+df <- n - 1
+
+# Compute the critical value for a right-tailed test
+chi_crit <- qchisq(1 - alpha, df)
+
+# Compute the p-value
+p_value <- 1 - pchisq(chi_sq, df)
+
+# Print results
+cat("Chi-Square Test for Population Variance\n")
+cat("----------------------------------------\n")
+cat(sprintf("Sample size (n): %d\n", n))
+cat(sprintf("Sample variance (s^2): %.3f\n", s2))
+cat(sprintf("Hypothesized variance (σ0^2): %.3f\n", sigma0_sq))
+cat(sprintf("Test statistic (χ²): %.3f\n", chi_sq))
+cat(sprintf("Critical value (χ²_crit, α=%.2f): %.3f\n", alpha, chi_crit))
+cat(sprintf("p-value: %.4f\n", p_value))
+
+# Decision rule
+if (chi_sq > chi_crit) {
+  cat("\nDecision: Reject H0 (variance is significantly greater than hypothesized)\n")
+} else {
+  cat("\nDecision: Fail to reject H0 (no evidence variance is greater than hypothesized)\n")
+}
+
+# --- Visualization ---
+# Plot Chi-Square distribution with rejection region and test statistic
+curve(dchisq(x, df), from = 0, to = 30, 
+      lwd = 2, col = "darkblue", 
+      ylab = "Density", xlab = expression(chi^2), 
+      main = bquote("Chi-Square Distribution (df = " ~ .(df) ~ ")"))
+
+# Shade rejection region
+x_shade <- seq(chi_crit, 30, length.out = 200)
+y_shade <- dchisq(x_shade, df)
+polygon(c(chi_crit, x_shade, 30), c(0, y_shade, 0), 
+        col = rgb(1, 0, 0, 0.3), border = NA)
+
+# Add vertical line for test statistic
+abline(v = chi_sq, col = "darkgreen", lwd = 2, lty = 2)
+
+# Annotate key points
+text(chi_sq + 0.8, 0.02, labels = bquote(chi^2[obs] == .(round(chi_sq, 2))), col = "darkgreen", pos = 4)
+text(chi_crit - 0.8, 0.02, labels = bquote(chi^2[crit] == .(round(chi_crit, 2))), col = "red", pos = 2)
+
+legend("topright", legend = c("Chi-Square PDF", "Rejection Region", "Observed χ²"),
+       col = c("darkblue", rgb(1,0,0,0.4), "darkgreen"),
+       lty = c(1, NA, 2), lwd = c(2, NA, 2), pch = c(NA, 15, NA), pt.cex = 1.5)
+
+```
+

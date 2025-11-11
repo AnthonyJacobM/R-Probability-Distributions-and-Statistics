@@ -1,0 +1,95 @@
+---
+title: "Logistic Function"
+author: "Anthony Morciglio"
+date: "10/29/2025"
+output: html_document
+---
+
+### Visualization of the Logistic Equation and Logistic Function
+
+In this section, we illustrate two key visual aspects of the Logistic Function and Equation.
+
+1. The first plot shows the **Logistic Growth Equation** derived by Pierre Verhulst:
+   \[
+   P(t) = \frac{K}{1 + A e^{-r t}}, \quad \text{where } A = \frac{K - P_0}{P_0}
+   \]
+   It models population growth that begins exponentially, slows, and stabilizes at the carrying capacity \( K \).  
+   The plot includes annotations for the carrying capacity, initial condition, and inflection point.
+
+2. The second plot displays the **Standard Logistic Function** \( f(x) = \frac{1}{1 + e^{-x}} \) in blue and its **Inverse Logit Function** \( f^{-1}(y) = \ln\left( \frac{y}{1 - y} \right) \) in red, illustrating their inverse relationship and symmetry about the line \( y = x \).
+
+```{r logistic-visualization, echo=TRUE, message=FALSE, warning=FALSE}
+
+# Load libraries
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+
+# ---------------------------
+# 1. Logistic Growth Equation
+# ---------------------------
+
+# Parameters
+K <- 100     # carrying capacity
+r <- 0.4     # intrinsic growth rate
+P0 <- 5      # initial population
+t <- seq(0, 50, length.out = 300)
+
+# Logistic growth equation
+A <- (K - P0) / P0
+P_t <- K / (1 + A * exp(-r * t))
+
+# Data frame for plotting
+df_logistic <- data.frame(t = t, P = P_t)
+
+# Inflection point occurs at P = K/2, t = (1/r) * log(A)
+t_inflect <- (1/r) * log(A)
+P_inflect <- K / 2
+
+# Plot Logistic Growth
+plot1 <- ggplot(df_logistic, aes(x = t, y = P)) +
+  geom_line(color = "blue", size = 1.2) +
+  geom_hline(yintercept = K, linetype = "dashed", color = "darkgreen") +
+  geom_point(aes(x = 0, y = P0), color = "red", size = 3) +
+  geom_point(aes(x = t_inflect, y = P_inflect), color = "black", size = 3) +
+  annotate("text", x = 40, y = K + 5, label = "Carrying Capacity (K)", color = "darkgreen", hjust = 1) +
+  annotate("text", x = 2, y = P0 + 5, label = "Initial Condition (P0)", color = "red", hjust = 0) +
+  annotate("text", x = t_inflect, y = P_inflect - 8, label = "Inflection Point", color = "black") +
+  labs(
+    title = "Logistic Growth Equation",
+    x = "Time (t)",
+    y = "Population (P)"
+  ) +
+  theme_minimal(base_size = 13)
+
+# ---------------------------
+# 2. Logistic vs Logit Function
+# ---------------------------
+
+# Define x and y
+x <- seq(-6, 6, length.out = 400)
+y <- 1 / (1 + exp(-x))                   # logistic function
+x_inv <- seq(0.001, 0.999, length.out = 400)
+logit_y <- log(x_inv / (1 - x_inv))      # inverse (logit)
+
+# Data frames
+df1 <- data.frame(x = x, y = y)
+df2 <- data.frame(x = x_inv, y = logit_y)
+
+# Plot Standard Logistic Function
+plot2 <- ggplot() +
+  geom_line(data = df1, aes(x = x, y = y), color = "blue", size = 1.2) +
+  geom_line(data = df2, aes(x = y, y = x), color = "red", size = 1.2) +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(
+    title = "Standard Logistic Function and Its Inverse (Logit)",
+    x = "x",
+    y = "y"
+  ) +
+  annotate("text", x = 4, y = 0.8, label = "Logistic Function", color = "blue", hjust = 0) +
+  annotate("text", x = -1, y = 5, label = "Inverse Logit Function", color = "red", hjust = 0) +
+  theme_minimal(base_size = 13)
+
+print(plot1);
+
+```

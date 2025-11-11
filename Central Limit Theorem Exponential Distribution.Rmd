@@ -1,0 +1,76 @@
+---
+title: "Central Limit Theorem with the Exponential Distribution"
+author: Anthony Morciglio
+date: 10/02/2025
+output: html_document
+---
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+library(ggplot2)
+```
+
+## Simulation of Sample Means from the Exponential Distribution
+
+We demonstrate the Central Limit Theorem (CLT) using the Exponential distribution.
+
+### Step 1: Define Parameters
+
+We choose an Exponential distribution with rate parameter $\lambda = 0.2$, which corresponds to a mean of 5.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+lambda <- 0.2
+mu <- 1 / lambda
+sigma <- 1 / lambda
+mu; sigma
+```
+
+### Step 2: Generate Sample Means
+
+We repeatedly draw samples of size $n = 50$ from the Exponential distribution and compute their means.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+set.seed(123)
+n <- 50        # sample size
+reps <- 5000   # number of replications
+
+sample_means <- replicate(reps, mean(rexp(n, rate = lambda)))
+length(sample_means)
+```
+
+### Step 3: Plot Distribution of Sample Means
+
+We compare the histogram of sample means with the Normal distribution predicted by the CLT.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+df <- data.frame(sample_means = sample_means)
+
+ggplot(df, aes(x = sample_means)) +
+  geom_histogram(aes(y = ..density..), bins = 40, fill = "blue", alpha = 0.6) +
+  stat_function(fun = dnorm,
+                args = list(mean = mu, sd = sigma/sqrt(n)),
+                color = "black", size = 1.2) +
+  labs(title = "Distribution of Sample Means of Exponential(λ=0.2)",
+       x = "Sample Mean",
+       y = "Density") +
+  theme_minimal()
+```
+
+### Step 4: Boxplot of Sample Means
+
+The boxplot shows the median, quartiles, and any outliers among the simulated sample means.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+ggplot(df, aes(y = sample_means)) +
+  geom_boxplot(fill = "orange", alpha = 0.6, outlier.color = "red") +
+  labs(title = "Boxplot of Sample Means",
+       y = "Sample Mean") +
+  theme_minimal()
+```
+
+### Interpretation
+
+* The histogram of sample means shows that the distribution is close to Normal, as predicted by the CLT.
+* The boxplot highlights the center (median ≈ 5), spread (interquartile range), and outliers from the sampling distribution of means.
+
+```
+```

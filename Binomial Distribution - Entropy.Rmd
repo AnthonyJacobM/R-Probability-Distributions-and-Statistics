@@ -1,0 +1,103 @@
+---
+title: "Binomial Distribution - Entropy"
+author: "Anthony Morciglio"
+date: "2025-08-29"
+output: html_document
+---
+
+## Visualizing the Entropy of the Binomial Distribution
+The R code provided for the Binomial Entropy Plot serves as a practical, computational companion to the theoretical blog post about the derivation of binomial entropy. While the blog post focused on the mathematical formula for entropy, this script brings that concept to life.
+
+The R code implements the derived formula, allowing you to calculate the entropy for any given number of trials (n) and probability of success (p). The true power of the code, however, lies in its ability to visualize the relationship between entropy and probability. The generated plot clearly shows how the entropy, a measure of uncertainty, is at its maximum when the probability of success is 0.5 (the most uncertain outcome) and decreases as the probability approaches either 0 or 1, where the outcome becomes more certain. This visual representation solidifies the abstract mathematical concepts from the blog post with a tangible and easy-to-understand graph.
+
+```{r setup, warning = FALSE, message = FALSE}
+# --- Required Libraries ---
+# Install these packages if you haven't already
+# install.packages("ggplot2")
+# install.packages("dplyr")
+# install.packages("tidyr")
+
+# Load the required libraries for plotting and data manipulation
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# --- Function to Calculate Binomial Entropy ---
+#
+# This function implements the derived formula for the entropy of a Binomial Distribution.
+# H(X) = - [sum P(X=k) * log2(nCk) + np log2(p) + n(1-p) log2(1-p)]
+#
+# Args:
+#   n: The number of trials.
+#   p: The probability of success.
+#
+# Returns:
+#   The entropy value.
+#
+calculate_binomial_entropy <- function(n, p) {
+  # Handle edge cases for p=0 or p=1 to avoid log(0) errors.
+  if (p == 0 || p == 1) {
+    return(0)
+  }
+  
+  # Calculate the sum term: sum P(X=k) * log2(nCk)
+  # This term requires a loop as it doesn't simplify further.
+  sum_term <- 0
+  for (k in 0:n) {
+    # Calculate binomial coefficient (nCk) and probability (P(X=k))
+    nCk <- choose(n, k)
+    pxk <- dbinom(k, size = n, prob = p)
+    
+    # Avoid log(0) if nCk is 0 (though it shouldn't be for k from 0 to n)
+    if (nCk > 0) {
+      sum_term <- sum_term + pxk * log2(nCk)
+    }
+  }
+  
+  # Calculate the second and third terms from the derivation
+  np_logp <- n * p * log2(p)
+  n1mp_log1mp <- n * (1 - p) * log2(1 - p)
+  
+  # Combine terms for the final entropy value
+  entropy <- - (sum_term + np_logp + n1mp_log1mp)
+  
+  return(entropy)
+}
+
+# --- Plotting the Entropy vs. Probability ---
+
+# Set fixed number of trials
+n <- 10
+
+# Create a sequence of p values to plot the curve
+p_values <- seq(0.01, 0.99, by = 0.01)
+
+# Calculate entropy for each p value
+entropy_values <- sapply(p_values, function(p) calculate_binomial_entropy(n, p))
+
+# Create a data frame for plotting
+plot_data <- data.frame(
+  p = p_values,
+  entropy = entropy_values
+)
+
+# Generate the plot
+ggplot(plot_data, aes(x = p, y = entropy)) +
+  geom_line(color = "#3b82f6", size = 1.5) +
+  geom_point(color = "#3b82f6", size = 2) +
+  # Add a vertical dashed line to highlight maximum entropy at p=0.5
+  geom_vline(xintercept = 0.5, linetype = "dashed", color = "#ef4444", size = 1) +
+  geom_text(aes(x = 0.5, y = max(entropy_values) * 0.95, label = "Maximum Entropy at p=0.5"), 
+            color = "#ef4444", hjust = -0.1, vjust = 1, size = 4) +
+  labs(
+    title = paste("Entropy of Binomial Distribution (n = ", n,") vs. Probability (p)"),
+    x = "Probability of Success (p)",
+    y = "Entropy H(X) (bits)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, face = "bold"),
+    plot.background = element_rect(fill = "#f3f4f6", color = NA),
+    panel.background = element_rect(fill = "white", color = NA)
+  )
+```

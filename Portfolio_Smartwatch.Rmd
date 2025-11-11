@@ -1,0 +1,650 @@
+---
+title: "Portfolio_Smartwatch"
+author: "Anthony Morciglio"
+date: "2024-06-12"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## About the Project and Dataset
+
+This is a detailed analysis of spreadsheet data for a fitness smartwatch that tracks data including: calories, hours slept, intensity levels, and overall data activity.  The original dataset can be found online on [Kaggle](https://www.kaggle.com/datasets/arashnic/fitbit), which is modified and cleaned to my profile at [Fitbit Project Portfolio](https://www.kaggle.com/datasets/anthonythegreat/coursera-fitbit-project-portfolio).
+
+In this analysis, I proceed to clean the data and aggregate datetime columns from the various spreadsheets to ensure each of the csv files (dailyActivity, dailySleep, dailyCalories, dailyIntensities, dailySteps) have uniform units of per day.  Additionally, I create a column that combines the activity day and Id to create a unique identifier (there are multiple observations per Id - see [hourlyIntensities](https://www.kaggle.com/datasets/anthonythegreat/coursera-fitbit-project-portfolio).  After cleaning the data, I use R code to merge and join the CSV files to begin looking for trends and patterns (joining could have been done in SQL, but the number of observations is relatively sparse).  
+
+```{r Load libraries and data}
+library(ggplot2)
+library(ggridges)
+library(tidyr)
+library(tidyverse)
+library(skimr)
+library(dplyr)
+library(viridis)
+library(SmartEDA)
+library(dlookr)
+library(DataExplorer)
+library(moments)
+library(flextable)
+library(forcats)
+library(corrplot)
+
+options(warn = -1)
+
+# -- Load and Clean Data -- #
+f1 <- "C:/Users/Anthony Morciglio/OneDrive/Coursera Google Data Analytics/Fitabase Data 3.12.16-4.11.16/dailyActivity_merged.csv"
+f2 <- "C:/Users/Anthony Morciglio/OneDrive/Coursera Google Data Analytics/Fitabase Data 3.12.16-4.11.16/dailySleep_merged.csv"
+f3 <- "C:/Users/Anthony Morciglio/OneDrive/Coursera Google Data Analytics/Fitabase Data 3.12.16-4.11.16/dailyCalories_merged.csv"
+f4 <- "C:/Users/Anthony Morciglio/OneDrive/Coursera Google Data Analytics/Fitabase Data 3.12.16-4.11.16/dailyIntensities_merged.csv"
+f5 <- "C:/Users/Anthony Morciglio/OneDrive/Coursera Google Data Analytics/Fitabase Data 3.12.16-4.11.16/dailySteps_merged.csv"
+
+
+df_daily_act <- read_csv(f1)
+df_daily_sleep <- read_csv(f2)
+df_daily_cal <- read_csv(f3)
+df_daily_int <- read_csv(f4)
+df_daily_steps <- read_csv(f5)
+
+# -- Combine data using join or merge functions -- #
+# Remark: joining on the unique identifier, ID-AD, obtained by combining Id with date
+
+df_tot <- df_daily_act %>% 
+   dplyr::inner_join(df_daily_sleep, by = "ID-AD") %>% select(-Id.x, -Id.y) %>% 
+     dplyr::inner_join(df_daily_int, by = "ID-AD") %>% select(-date.x, -date.y, -TrackerDistance) 
+
+colnames(df_tot)[16] <- "HoursSlept"
+colnames(df_tot)[11] <- "ModeratelyActiveMinutes"
+colnames(df_tot)[8] <- "LightlyActiveDistance"
+```
+
+## Observations after Modification
+After joining the data using dplyr::inner_join(), we change a few of the column names and observe most of the columns are numeric types.  Before creating visualizations, we will generate a few preliminary reports using functions from libraries such as DataExplorer, SmartEDA, and dlookr.  
+
+It would be beneficial to create categorical variables based on the activity levels of the people using the fitbits.  Since we are interested in the number of Calories burned (to market the product in the wellness and fitness industry), we can categorize activity levels hierarchically such as Sedentary, Lightly Active, Moderately Active, and Very Active using binning.
+
+```{r Create Tables and Preliminary Reports, echo=FALSE}
+options(warn = -1)
+
+df_tot %>% select(-logId, -"ID-AD", -Id) %>% glimpse() %>% flextable() 
+summary(df_tot)
+df_tot %>% select(-logId, -Id, -"ID-AD") %>% dlookr::describe() %>% mutate(across(is.numeric, ~round(., 2))) %>% arrange(kurtosis) %>% flextable()
+df_tot %>% select(-logId, -Id, -"ID-AD") %>% dlookr::diagnose_numeric() %>% mutate(across(is.numeric, ~round(., 2))) %>% flextable() 
+
+# check number of outliers and zeros
+
+# The highest number of outliers is VeryActiveMinutes, SedentaryMinutes, ModeratelyActiveDistance
+
+# Whereas the least number of outliers is HoursSlept, Calories, LightActiveDistance
+
+# Create short reports to better understand the data
+#library(DataExplorer)
+
+#df_tot %>% select(-logId, -Id, -"ID-AD") %>% create_report() 
+# report w/o response variable
+
+# PC1: Variables w/ highest variance: SedentaryMinutes, TotalDistance, TotalSteps, VeryActiveDistance, LightlyActiveDistance
+#df_tot %>%  select(-logId, -Id, -"ID-AD") %>% create_report(y = "Calories") 
+# report w/ response variable
+
+#library(SmartEDA)
+#df_tot %>%  select(-logId, -Id, -"ID-AD") %>% ExpReport(op_file = "FitnessEDAReport.html")
+
+# Variables with Kurtosis greater than 0, close to 3: TotalDistance, TrackerDistance
+# ... Close to 3 - Calories, SedentaryMinutes, LightlyActiveMinutes, LightlyActiveDistance, TotalSteps
+# Apply Hypothesis Testing to Kurtosis of the variables:
+anscombe.test(df_tot$TotalSteps)
+anscombe.test(df_tot$Calories)
+anscombe.test(df_tot$VeryActiveDistance)
+anscombe.test(df_tot$LightlyActiveMinutes)
+
+
+#library(dlookr)
+# Check to see the number of observations with zeros and negative values and how the distributions change by removing outliers.
+#df_tot %>%  select(-logId, -Id, -"ID-AD") %>% diagnose_report(output_format = 'html')
+# There are no observations of negative data.
+# Variables with significant change of distribution after removing outliers:
+# VeryActiveMinutes, SedentaryMinutes, LoggedActiviesDistance, ModeratelyActiveDistance, FairlyActiveMinutes
+
+
+# Use transformation report for when there is missing data in a column of interest.
+#transformation_report(data = df_tot, target = TotalDistance, output_format = 'html')
+#df_tot %>%  select(-logId, -Id, -"ID-AD") %>% eda_report(target = TotalDistance, output_format = 'html', output_file = 'EDA_Fitness_TotalDistance.html')
+# Shapiro-Wilk Test for normality -- H0 - distribution is normal (pval > 0.05)
+# All vars are not normal in this dataset, but their are some with Kurtosis close to 3.
+
+
+#library(SmartEDA)
+# Create Automated Reports
+#df_tot %>%  select(-logId, -"ID-AD") %>% ExpReport(op_file = 'FitnessSmartEDA.html')
+#df_tot %>%  select(-logId, -"ID-AD") %>% ExpNumStat(by = "A", Outlier = TRUE, Qnt = c(0.25, 0.75), round = 2) %>% flextable()
+
+# The two most closest to normal variables in the dataset are TotalSteps, TrackerDistance, and LightlyActiveMinutes.
+# Correlation plots suggest Calories are most positively related with VeryActiveMinutes and negatively related with HoursSlept.
+
+
+# We observe that there are a greater number of numeric columns compared to character class types
+# We will need to generate categorical data by partitioning data based on numeric, i.e., binning
+# Candidate variables for binning include: TotalDistance (Q2, Q3), TotalSteps (Q2, Q3), LightlyActiveDistance (Q2, Q3), VeryActiveDistance (Q2, Q3)
+
+```
+
+Our reports suggest we do not have any negative data and the variables with greatest change after removing outliers include: VeryActiveMinutes, SedentaryMinutes, LoggedActiviesDistance, ModeratelyActiveDistance, and ModeratelyActiveMinutes (see: FitnessSmartEDA from SmartEDA library) with VeryActiveMinutes having the greatest change as the Kurtosis has a value of around 9.38 (using kurtosis()).  Some of the data is somewhat normally distributed after making observations when testing for Kurtosis close to 3 using anscombe.test() for Calories, TotalSteps, VeryActiveDistance, and LightlyActiveDistance.  Most of the data appears to be skewed right with VeryActiveMiinutes having skewness of around 2.25 (using skewness()). 
+
+We can now explore the patterns within the dataset such as how much distance should a person travel in order to burn a certain amount of calories and how is sleep related to the activity levels of a person, but first we will need to explore the heterogeneity of the distributions of the columns of data. 
+
+
+```{r Preliminary Visualizations}
+# -- Generate density functions 
+# We are interested in the properties of Calories burned.
+# The distribution appears to be bimodally distributed: 
+
+ggplot(data = df_tot, aes(x = Calories)) + 
+  geom_density(data = df_tot, aes(x = Calories)) + 
+  labs(x = "Calories", title = "PDF: Calories", y = "Density") + 
+    theme_linedraw(base_size = 18)
+
+cvar <- df_tot$SedentaryMinutes
+quartiles <- quantile(cvar, c(0.25, 0.5, 0.75))
+df_tot$qrts <- cut(cvar, breaks = c(-Inf, quartiles, Inf), labels = c("Q1", "Q2", "Q3", "Q4"))
+ggplot(data = df_tot, aes(x = df_tot$qrts, y = Calories, fill = df_tot$qrts)) + 
+  geom_violin(data = df_tot, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  #geom_boxplot(data = df_tot, aes(x = df_tot$qrts), width = 0.10) + 
+  labs(x = "Sedentary Minutes", y = "Calories", title = "Box Plot: Sedentary Minutes vs Calories", fill = "Quantiles") +
+  scale_fill_manual(values = viridis(n = length(unique(df_tot$qrts)))) + 
+    theme_linedraw(base_size = 18)
+
+cvar <- df_tot$LightlyActiveMinutes
+quartiles <- quantile(cvar, c(0.25, 0.5, 0.75))
+df_tot$qrts <- cut(cvar, breaks = c(-Inf, quartiles, Inf), labels = c("Q1", "Q2", "Q3", "Q4"))
+ggplot(data = df_tot, aes(x = df_tot$qrts, y = Calories, fill = df_tot$qrts)) + 
+  geom_violin(data = df_tot, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  #geom_boxplot(data = df_tot, aes(x = df_tot$qrts), width = 0.10) + 
+  labs(x = "Light Activity Minutes", y = "Calories", title = "Box Plot: Light Activity Minutes vs Calories", fill = "Quantiles") +
+  scale_fill_manual(values = viridis(n = length(unique(df_tot$qrts)))) + 
+    theme_linedraw(base_size = 18)
+
+cvar <- df_tot$ModeratelyActiveMinutes
+quartiles <- quantile(cvar, c(0.25, 0.5, 0.75))
+df_tot$qrts <- cut(cvar, breaks = c(-Inf, quartiles, Inf), labels = c("Q1", "Q2", "Q3", "Q4"))
+ggplot(data = df_tot, aes(x = df_tot$qrts, y = Calories, fill = df_tot$qrts)) + 
+  geom_violin(data = df_tot, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  #geom_boxplot(data = df_tot, aes(x = df_tot$qrts), width = 0.10) + 
+  labs(x = "Moderate Activity Minutes", y = "Calories", title = "Box Plot: Moderate Activity Minutes vs Calories", fill = "Quantiles") +
+  scale_fill_manual(values = viridis(n = length(unique(df_tot$qrts)))) + 
+    theme_linedraw(base_size = 18)
+
+cvar <- df_tot$VeryActiveMinutes
+quartiles <- quantile(cvar, c(0.25, 0.5, 0.75))
+df_tot$qrts <- cut(cvar, breaks = c(-Inf, quartiles, Inf), labels = c("Q1", "Q2", "Q3", "Q4"))
+ggplot(data = df_tot, aes(x = df_tot$qrts, y = Calories, fill = df_tot$qrts)) + 
+  geom_violin(data = df_tot, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  #geom_boxplot(data = df_tot, aes(x = df_tot$qrts), width = 0.10) + 
+  labs(x = "Very Activity Minutes", y = "Calories", title = "Box Plot: Very Activity Minutes vs Calories", fill = "Quantiles") +
+  scale_fill_manual(values = viridis(n = length(unique(df_tot$qrts)))) + 
+    theme_linedraw(base_size = 18)
+
+
+
+
+
+# Remark: SedentaryActiveDistance does not work due to the distribution properties.
+
+cvar <- df_tot$LightlyActiveDistance
+quartiles <- quantile(cvar, c(0.25, 0.5, 0.75))
+df_tot$qrts <- cut(cvar, breaks = c(-Inf, quartiles, Inf), labels = c("Q1", "Q2", "Q3", "Q4"))
+ggplot(data = df_tot, aes(x = df_tot$qrts, y = Calories, fill = df_tot$qrts)) + 
+  geom_violin(data = df_tot, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  #geom_boxplot(data = df_tot, aes(x = df_tot$qrts), width = 0.10) + 
+  labs(x = "Light Activity Distance", y = "Calories", title = "Box Plot: Light Activity Distance vs Calories", fill = "Quantiles") +
+  scale_fill_manual(values = viridis(n = length(unique(df_tot$qrts)))) + 
+    theme_linedraw(base_size = 18)
+
+cvar <- df_tot$ModeratelyActiveDistance
+quartiles <- quantile(cvar, c(0.25, 0.5, 0.75))
+df_tot$qrts <- cut(cvar, breaks = c(-Inf, quartiles, Inf), labels = c("Q1", "Q2", "Q3", "Q4"))
+ggplot(data = df_tot, aes(x = df_tot$qrts, y = Calories, fill = df_tot$qrts)) + 
+  geom_violin(data = df_tot, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  #geom_boxplot(data = df_tot, aes(x = df_tot$qrts), width = 0.10) + 
+  labs(x = "Moderate Activity Distance", y = "Calories", title = "Box Plot: Moderate Activity Distance vs Calories", fill = "Quantiles") +
+  scale_fill_manual(values = viridis(n = length(unique(df_tot$qrts)))) + 
+    theme_linedraw(base_size = 18)
+
+cvar <- df_tot$VeryActiveDistance
+quartiles <- quantile(cvar, c(0.25, 0.5, 0.75))
+df_tot$qrts <- cut(cvar, breaks = c(-Inf, quartiles, Inf), labels = c("Q1", "Q2", "Q3", "Q4"))
+ggplot(data = df_tot, aes(x = df_tot$qrts, y = Calories, fill = df_tot$qrts)) + 
+  geom_violin(data = df_tot, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  #geom_boxplot(data = df_tot, aes(x = df_tot$qrts), width = 0.10) + 
+  labs(x = "Very Activity Distance", y = "Calories", title = "Box Plot: Very Activity Distance vs Calories", fill = "Quantiles") +
+  scale_fill_manual(values = viridis(n = length(unique(df_tot$qrts)))) + 
+    theme_linedraw(base_size = 18)
+```
+
+We observe the LightActivityMinutes plot to be bimodally distributed at the first and third quartile with a significant proportion of the highest forth quartile to have a skinny tail (violin plot in yellow) suggesting a uniform spread.  In the FairlyActivityMinutes plot, we observe similar distributions for the third and forth quartiles and similar results are obtained in the VeryActiveMinutes plot for the first and second quartiles.  This suggests the upper and lower tails of the variables are not similarly distributed and we can categorize the activity levels based on multiple columns.  Similar results are obtained when substituting minutes for distance, but the qualitative shape of the distribution is less heterogeneous.  
+
+After exploring with various methods, I started by taking the greatest of the measures of central tendency (average and median) for each variable (VeryActiveMinutes, ModeratelyActiveMinutes, and LightlyActiveMinutes).  The Very Active population will be greater than or equal to the max of average and median of VeryActiveMinutes, otherwise it would fall into the Moderately Active or Lightly Active population.  To classify if it should fall into the Moderately Active population, the population should have greater ModeratelyActiveMinutes than the max of median and average of its respective column.  A similar approach is applied for the Lightly Active categorization.  If it does not fall into the three classifications, it is Sedentary.  
+A similar method could be applied when substituting Minutes for Distance, but the results do not change too much (just a slight difference in where each member is categorized - can be seen in the bar chart).
+
+
+```{r Binning and Categorization}
+# -- Group by using the binning method -- #
+# In the absence of categorical data, we will create factor variables based on the numeric variables.
+
+df_tot_user_mins <- df_tot %>% 
+  summarise(
+    user_type = factor(case_when(
+      VeryActiveMinutes >= max(median(VeryActiveMinutes), mean(VeryActiveMinutes)) ~ "Very Active",
+      VeryActiveMinutes < max(median(VeryActiveMinutes), mean(VeryActiveMinutes)) & 
+        ModeratelyActiveMinutes >= max(median(ModeratelyActiveMinutes), mean(ModeratelyActiveMinutes))  ~ "Moderately Active",
+      VeryActiveMinutes < max(median(VeryActiveMinutes), mean(VeryActiveMinutes)) & 
+        ModeratelyActiveMinutes < max(median(ModeratelyActiveMinutes), mean(ModeratelyActiveMinutes)) & 
+          LightlyActiveMinutes >= max(median(LightlyActiveMinutes), mean(LightlyActiveMinutes))   ~ "Lightly Active", 
+      VeryActiveMinutes < max(median(VeryActiveMinutes), mean(VeryActiveMinutes)) & 
+        ModeratelyActiveMinutes < max(median(ModeratelyActiveMinutes), mean(ModeratelyActiveMinutes)) & 
+          LightlyActiveMinutes < max(median(LightlyActiveMinutes), mean(LightlyActiveMinutes)) ~ "Sedentary",
+        ),
+      levels = c("Very Active", "Moderately Active", "Lightly Active", "Sedentary")), 
+    Calories, 
+    HoursSlept, 
+    TotalDistance, 
+    TotalIntensity
+  )
+
+# Observe the aggregated data categorized by minutes
+
+glimpse(df_tot_user_mins) %>% flextable()
+summary(df_tot_user_mins) 
+
+df_tot_user_dist <- df_tot %>% 
+  summarise(
+    user_type = factor(case_when(
+      VeryActiveDistance >= max(median(VeryActiveDistance), mean(VeryActiveDistance)) ~ "Very Active",
+      VeryActiveDistance < max(median(VeryActiveDistance), mean(VeryActiveDistance)) & 
+        ModeratelyActiveDistance >= max(median(ModeratelyActiveDistance), mean(ModeratelyActiveDistance))  ~ "Moderately Active",
+      VeryActiveDistance < max(median(VeryActiveDistance), mean(VeryActiveDistance)) & 
+        ModeratelyActiveDistance < max(median(ModeratelyActiveDistance), mean(ModeratelyActiveDistance)) & 
+        LightlyActiveDistance >= max(median(LightlyActiveDistance), mean(LightlyActiveDistance))   ~ "Lightly Active", 
+      VeryActiveDistance < max(median(VeryActiveDistance), mean(VeryActiveDistance)) & 
+        ModeratelyActiveDistance < max(median(ModeratelyActiveDistance), mean(ModeratelyActiveDistance)) & 
+        LightlyActiveDistance < max(median(LightlyActiveDistance), mean(LightlyActiveDistance)) ~ "Sedentary",
+    ),
+    levels = c("Very Active", "Moderately Active", "Lightly Active", "Sedentary")), 
+    Calories, 
+    HoursSlept, 
+    TotalDistance, 
+    TotalIntensity
+  )
+
+# Observe the aggregated data:
+glimpse(df_tot_user_dist) %>% flextable()
+summary(df_tot_user_dist)
+
+
+# -- Correlation tests before grouping
+
+library(flextable) 
+df_tot %>% select(-Id, -"ID-AD", -logId) %>% 
+dlookr::normality() %>% 
+  mutate(across(is.numeric, ~round(., 2))) %>% 
+  arrange(statistic) %>% 
+  flextable()
+
+# -- Apply similar method after grouping -- #
+df_tot_user_mins %>% 
+  group_by(user_type) %>% 
+  dlookr::normality() %>% 
+  mutate(across(is.numeric, ~round(., 2))) %>% 
+  arrange(statistic) %>% 
+  flextable()
+
+df_tot_user_dist %>% 
+  group_by(user_type) %>% 
+  dlookr::normality() %>% 
+  mutate(across(is.numeric, ~round(., 2))) %>% 
+  arrange(statistic) %>% 
+  flextable()
+
+```
+
+We apply the Shaprio-Wilk test for Normality before and after categorizing based on minutes and notice that TotalDistance for Moderately Active and Calories for Sedentary population are normally distributed (pvalue of 0.19 and 0.50).  As a reminder, the null hypothesis is that the distribution is Gaussian (normal) and if the pvalue is less than or equal to 0.05, then the distribution is not Gaussian.
+
+We will now visualize the plots after binning by minutes, which lead to interesting findings:
+
+```{r Visualizations After Binning by Minutes}
+# Categorize by Minutes
+# C:Q - Calories
+df <- df_tot_user_mins
+
+# Bar plots to visualize the samples in the dataset.
+ggplot(data = df_tot_user_mins, aes(x = user_type, fill = user_type)) + 
+  geom_bar(data = df_tot_user_mins, aes(x = fct_infreq(user_type), fill = user_type)) + 
+  labs(x = "UserType", y = "Frequency", title = "Bar Chart: Usertype Categorized by Minutes", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df_tot_user_dist, aes(x = user_type, fill = user_type)) + 
+  geom_bar(data = df_tot_user_dist, aes(x = fct_infreq(user_type), fill = user_type)) + 
+  labs(x = "UserType", y = "Frequency", title = "Bar Chart: Usertype Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+
+# Q:Q - Correlogram to visualize the correlation between all numeric columns.
+df_num <- df %>% select(-user_type) %>% drop_na()
+colnames(df_num) <- c("Calories", "Hours Slept", "Total Distance", "Total Intensity")
+corr_mat <- cor(as.matrix(df_num))
+corrplot(corr_mat, method = 'square', tl.col = 'black') +
+  theme_linedraw(base_size = 18)
+
+  
+# Boxplots to visualize the distribution.
+ggplot(data = df, aes(x = user_type, y = Calories, fill = user_type)) + 
+  geom_violin(data = df, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  #geom_boxplot(data = df, aes(x = user_type)) + 
+  labs(x = "UserType", y = "Calories", title = "Box Plot: Usertype vs Calories Categorized by Minutes", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+    theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = user_type, y = Calories, fill = user_type)) + 
+  #geom_violin(data = df, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  geom_boxplot(data = df, aes(x = df$user_type)) + 
+  labs(x = "UserType", y = "Calories", title = "Box Plot: Usertype vs Calories Categorized by Minutes", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+    theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = Calories, group = user_type, fill = user_type)) + 
+  #geom_density(position = "fill", adjust = 1.5) +
+  geom_density(data = df, aes(x = Calories, fill = df$user_type, alpha = 0.2)) + 
+  facet_wrap( ~ user_type) +
+  labs(x = "Calories", y = "Density", title = "Density Plot: Calories Categorized by Minutes", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = Calories, group = user_type, fill = user_type)) + 
+  geom_density(position = "fill", adjust = 1.5) +
+  #geom_density(data = df, aes(x = Calories, fill = df$user_type, alpha = 0.2)) + 
+  labs(x = "Calories", y = "Density", title = "Density Plot: Calories Categorized by Minutes", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data=df, aes(x = Calories, color = df$user_type)) +
+  stat_ecdf(data=df, geom = "step", aes(color=df$user_type, x=Calories)) + 
+  labs(x = "Calories", y = "Probability", title = "CDF: Calories Categorized by Minutes", color = "UserType") +
+  #facet_wrap( ~ user_type) + 
+  scale_color_manual(values = viridis(n = length(unique(df$user_type)))) +
+  theme_linedraw(base_size = 18) 
+
+# C:Q Intensity
+ggplot(data = df, aes(x = user_type, y = TotalDistance, fill = user_type)) + 
+  geom_violin(data = df, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  #geom_boxplot(data = df, aes(x = user_type)) + 
+  labs(x = "UserType", y = "Total Distance", title = "Box Plot: Usertype vs Total Distance Categorized by Minutes", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = user_type, y = TotalDistance, fill = user_type)) + 
+  #geom_violin(data = df, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  geom_boxplot(data = df, aes(x = df$user_type)) + 
+  labs(x = "UserType", y = "Total Distance", title = "Box Plot: Usertype vs Total Distance Categorized by Minutes", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = TotalDistance, group = user_type, fill = user_type)) + 
+  #geom_density(position = "fill", adjust = 1.5) +
+  geom_density(data = df, aes(x = TotalDistance, fill = df$user_type, alpha = 0.2)) + 
+  facet_wrap( ~ user_type) +
+  labs(x = "Total Distance", y = "Density", title = "Density Plot: Total Distance Categorized by Minutes", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = TotalDistance, group = user_type, fill = user_type)) + 
+  geom_density(position = "fill", adjust = 1.5) +
+  #geom_density(data = df, aes(x = TotalDistance, fill = df$user_type, alpha = 0.2)) + 
+  labs(x = "Total Distance", y = "Density", title = "Density Plot: Total Distance Categorized by Minutes", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data=df, aes(x = TotalDistance, color = df$user_type)) +
+  stat_ecdf(data=df, geom = "step", aes(color=df$user_type, x=TotalDistance)) + 
+  labs(x = "Total Distance", y = "Probability", title = "CDF: Total Distance Categorized by Minutes", color = "UserType") +
+  #facet_wrap( ~ user_type) + 
+  scale_color_manual(values = viridis(n = length(unique(df$user_type)))) +
+  theme_linedraw(base_size = 18) 
+
+# C:Q HoursSlept
+ggplot(data = df, aes(x = user_type, y = HoursSlept, fill = user_type)) + 
+  geom_violin(data = df, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  #geom_boxplot(data = df, aes(x = user_type)) + 
+  labs(x = "UserType", y = "Hours Slept", title = "Box Plot: Usertype vs Hours Slept Categorized by Minutes", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = user_type, y = HoursSlept, fill = user_type)) + 
+  #geom_violin(data = df, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  geom_boxplot(data = df, aes(x = df$user_type)) + 
+  labs(x = "UserType", y = "Hours Slept", title = "Box Plot: Usertype vs Hours Slept Categorized by Minutes", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = HoursSlept, group = user_type, fill = user_type)) + 
+  #geom_density(position = "fill", adjust = 1.5) +
+  geom_density(data = df, aes(x = HoursSlept, fill = df$user_type, alpha = 0.2)) + 
+  facet_wrap( ~ user_type) +
+  labs(x = "Hours Slept", y = "Density", title = "Density Plot: Hours Slept Categorized by Minutes", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = HoursSlept, group = user_type, fill = user_type)) + 
+  geom_density(position = "fill", adjust = 1.5) +
+  #geom_density(data = df, aes(x = HoursSlept, fill = df$user_type, alpha = 0.2)) + 
+  labs(x = "Hours Slept", y = "Density", title = "Density Plot: Hours Slept Categorized by Minutes", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data=df, aes(x = HoursSlept, color = df$user_type)) +
+  stat_ecdf(data=df, geom = "step", aes(color=df$user_type, x=HoursSlept)) + 
+  labs(x = "Hours Slept", y = "Probability", title = "CDF: Hours Slept Categorized by Minutes", color = "UserType") +
+  #facet_wrap( ~ user_type) + 
+  scale_color_manual(values = viridis(n = length(unique(df$user_type)))) +
+  theme_linedraw(base_size = 18) 
+
+
+# C:Q Intensity
+ggplot(data = df, aes(x = user_type, y = TotalIntensity, fill = user_type)) + 
+  geom_violin(data = df, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "UserType", y = "Intensity", title = "Box Plot: Usertype vs Intensity Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = user_type, y = TotalIntensity, fill = user_type)) + 
+  geom_boxplot(data = df, aes(x = df$user_type)) + 
+  labs(x = "UserType", y = "Intensity", title = "Box Plot: Usertype vs Intensity Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = TotalIntensity, group = user_type, fill = user_type)) + 
+  geom_density(data = df, aes(x = HoursSlept, fill = df$user_type, alpha = 0.2)) + 
+  facet_wrap( ~ user_type) +
+  labs(x = "Intensity", y = "Density", title = "Density Plot: Intensity Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18)
+
+ggplot(data = df, aes(x = TotalIntensity, group = user_type, fill = user_type)) + 
+  geom_density(position = "fill", adjust = 1.5) +
+  labs(x = "Intensity", y = "Density", title = "Density Plot: Intensity Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data=df, aes(x = TotalIntensity, color = df$user_type)) +
+  stat_ecdf(data=df, geom = "step", aes(color=df$user_type, x=HoursSlept)) + 
+  labs(x = "Intensity", y = "Probability", title = "CDF: Intensity Categorized by Distance", color = "UserType") +
+  scale_color_manual(values = viridis(n = length(unique(df$user_type)))) +
+  theme_linedraw(base_size = 18)
+
+
+
+```
+
+We notice that the Calories is least correlated with Hours Slept and most correlated with Total Distance traveled.  Both of the Very Active and Moderately Active densities are bimodally distributed suggesting those that burn a large amount of calories are getting enough sleep or are sleep deprived.  Interestingly, those that are Sedentary are most likely to oversleep (get more than 8 hours of daily sleep - seen by the CDF plot of Hours Slept and Stacked Density plot).  
+
+Additionally, we see a greater proportion of Sedentary population when binning by Distance compared to Sleep.  This implies when we categorize by Distance, there is a greater weight at the tails of the activity levels, however there is not too much of a difference between the other plots.
+
+The Stacked Density plots of Total Distance suggest most of the Sedentary population does not travel more than 3 miles (around 82% by the CDF plot) compared to about 6 miles for the Lightly Active population (at 75th percentile).  The gap (width between groups) is narrowed for Moderately Active and Very Active populations.
+We also see the facet wrap of the Total Distance is Gaussian like for the Moderately Active group and highly skewed left.  In contrast, the Total Distance for Sedentary population is skewed right.  These plots suggest we that our categorization coincides with our intuition.
+
+The violin and boxplots of the Calories coincide with our preliminary visualizations. The Very Active group is bimodal and the Sedentary group has the smallest third quartile.  Getting light activity in the day increases your likelihood of burning more calories and it is not necessary to highly active to burn more than 2000 calories.
+
+## Supplemental Visualizations (Binning by Distance)
+Similar visualizations can be obtained when binning by distance instead of minutes:
+
+```{r Visualizations After Binning by Distance}
+# Categorize by Distance
+df <- df_tot_user_dist
+ggplot(data = df, aes(x = user_type, y = Calories, fill = user_type)) + 
+  geom_violin(data = df, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  #geom_boxplot(data = df, aes(x = user_type)) + 
+  labs(x = "UserType", y = "Calories", title = "Box Plot: Usertype vs Calories Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = user_type, y = Calories, fill = user_type)) + 
+  #geom_violin(data = df, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  geom_boxplot(data = df, aes(x = df$user_type)) + 
+  labs(x = "UserType", y = "Calories", title = "Box Plot: Usertype vs Calories Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = Calories, group = user_type, fill = user_type)) + 
+  #geom_density(position = "fill", adjust = 1.5) +
+  geom_density(data = df, aes(x = Calories, fill = df$user_type, alpha = 0.2)) + 
+  facet_wrap( ~ user_type) +
+  labs(x = "Calories", y = "Density", title = "Density Plot: Calories Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = Calories, group = user_type, fill = user_type)) + 
+  geom_density(position = "fill", adjust = 1.5) +
+  #geom_density(data = df, aes(x = Calories, fill = df$user_type, alpha = 0.2)) + 
+  labs(x = "Calories", y = "Density", title = "Density Plot: Calories Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data=df, aes(x = Calories, color = df$user_type)) +
+  stat_ecdf(data=df, geom = "step", aes(color=df$user_type, x=Calories)) + 
+  labs(x = "Calories", y = "Probability", title = "CDF: Calories Categorized by Distance", color = "UserType") +
+  #facet_wrap( ~ user_type) + 
+  scale_color_manual(values = viridis(n = length(unique(df$user_type)))) +
+  theme_linedraw(base_size = 18)
+
+# C:Q Intensity
+ggplot(data = df, aes(x = user_type, y = TotalDistance, fill = user_type)) + 
+  geom_violin(data = df, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  #geom_boxplot(data = df, aes(x = user_type)) + 
+  labs(x = "UserType", y = "Total Distance", title = "Box Plot: Usertype vs Total Distance Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = user_type, y = TotalDistance, fill = user_type)) + 
+  #geom_violin(data = df, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  geom_boxplot(data = df, aes(x = df$user_type)) + 
+  labs(x = "UserType", y = "Total Distance", title = "Box Plot: Usertype vs Total Distance Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = TotalDistance, group = user_type, fill = user_type)) + 
+  #geom_density(position = "fill", adjust = 1.5) +
+  geom_density(data = df, aes(x = TotalDistance, fill = df$user_type, alpha = 0.2)) + 
+  facet_wrap( ~ user_type) +
+  labs(x = "Total Distance", y = "Density", title = "Density Plot: Total Distance Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = TotalDistance, group = user_type, fill = user_type)) + 
+  geom_density(position = "fill", adjust = 1.5) +
+  #geom_density(data = df, aes(x = TotalDistance, fill = df$user_type, alpha = 0.2)) + 
+  labs(x = "Total Distance", y = "Density", title = "Density Plot: Total Distance Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data=df, aes(x = TotalDistance, color = df$user_type)) +
+  stat_ecdf(data=df, geom = "step", aes(color=df$user_type, x=TotalDistance)) + 
+  labs(x = "Total Distance", y = "Probability", title = "CDF: Total Distance Categorized by Distance", color = "UserType") +
+  #facet_wrap( ~ user_type) + 
+  scale_color_manual(values = viridis(n = length(unique(df$user_type)))) +
+  theme_linedraw(base_size = 18) 
+
+# C:Q HoursSlept
+ggplot(data = df, aes(x = user_type, y = HoursSlept, fill = user_type)) + 
+  geom_violin(data = df, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  #geom_boxplot(data = df, aes(x = user_type)) + 
+  labs(x = "UserType", y = "Hours Slept", title = "Box Plot: Usertype vs Hours Slept Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = user_type, y = HoursSlept, fill = user_type)) + 
+  #geom_violin(data = df, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  geom_boxplot(data = df, aes(x = df$user_type)) + 
+  labs(x = "UserType", y = "Hours Slept", title = "Box Plot: Usertype vs Hours Slept Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = HoursSlept, group = user_type, fill = user_type)) + 
+  #geom_density(position = "fill", adjust = 1.5) +
+  geom_density(data = df, aes(x = HoursSlept, fill = df$user_type, alpha = 0.2)) + 
+  facet_wrap( ~ user_type) +
+  labs(x = "Hours Slept", y = "Density", title = "Density Plot: Hours Slept Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18)
+
+
+ggplot(data = df, aes(x = HoursSlept, group = user_type, fill = user_type)) + 
+  geom_density(position = "fill", adjust = 1.5) +
+  #geom_density(data = df, aes(x = HoursSlept, fill = df$user_type, alpha = 0.2)) + 
+  labs(x = "Hours Slept", y = "Density", title = "Density Plot: Hours Slept Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data=df, aes(x = HoursSlept, color = df$user_type)) +
+  stat_ecdf(data=df, geom = "step", aes(color=df$user_type, x=HoursSlept)) + 
+  labs(x = "Hours Slept", y = "Probability", title = "CDF: Hours Slept Categorized by Distance", color = "UserType") +
+  scale_color_manual(values = viridis(n = length(unique(df$user_type)))) +
+  theme_linedraw(base_size = 18)
+
+# C:Q Intensity
+ggplot(data = df, aes(x = user_type, y = TotalIntensity, fill = user_type)) + 
+  geom_violin(data = df, trim = FALSE, draw_quantiles = c(0.25, 0.5, 0.75)) + 
+  labs(x = "UserType", y = "Intensity", title = "Box Plot: Usertype vs Intensity Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = user_type, y = TotalIntensity, fill = user_type)) + 
+  geom_boxplot(data = df, aes(x = df$user_type)) + 
+  labs(x = "UserType", y = "Intensity", title = "Box Plot: Usertype vs Intensity Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data = df, aes(x = TotalIntensity, group = user_type, fill = user_type)) + 
+  geom_density(data = df, aes(x = HoursSlept, fill = df$user_type, alpha = 0.2)) + 
+  facet_wrap( ~ user_type) +
+  labs(x = "Intensity", y = "Density", title = "Density Plot: Intensity Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18)
+
+ggplot(data = df, aes(x = TotalIntensity, group = user_type, fill = user_type)) + 
+  geom_density(position = "fill", adjust = 1.5) +
+  labs(x = "Intensity", y = "Density", title = "Density Plot: Intensity Categorized by Distance", fill = "UserType") +
+  scale_fill_manual(values = viridis(n = length(unique(df$user_type)))) + 
+  theme_linedraw(base_size = 18) 
+
+ggplot(data=df, aes(x = TotalIntensity, color = df$user_type)) +
+  stat_ecdf(data=df, geom = "step", aes(color=df$user_type, x=HoursSlept)) + 
+  labs(x = "Intensity", y = "Probability", title = "CDF: Intensity Categorized by Distance", color = "UserType") +
+  scale_color_manual(values = viridis(n = length(unique(df$user_type)))) +
+  theme_linedraw(base_size = 18)
+
+```
+
+
+
