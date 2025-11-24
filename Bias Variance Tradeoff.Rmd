@@ -1,0 +1,119 @@
+---
+title: "Visualizing the Bias–Variance Tradeoff"
+author: "Anthony Morciglio"
+date: "11/17/2025"
+output: html_document
+---
+
+## Introduction
+
+This RMarkdown document illustrates the **Bias–Variance Tradeoff** using simulated data.
+We generate a nonlinear true function and fit polynomial regression models of increasing 
+complexity. For each model, we estimate:
+
+- **Bias²**  
+- **Variance**  
+- **Total Error = Bias² + Variance**
+
+Finally, we visualize how model complexity impacts the three components.
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+
+library(ggplot2)
+library(dplyr)
+
+set.seed(123)
+
+# ---------------------------------------------------
+# 1. Generate the "true" underlying function
+# ---------------------------------------------------
+true_f <- function(x) sin(2*pi*x)   # Nonlinear true function
+n <- 50
+x_vals <- seq(0, 1, length.out = n)
+true_y <- true_f(x_vals)
+
+# ---------------------------------------------------
+# 2. Simulation settings
+# ---------------------------------------------------
+num_sims <- 200           # Number of simulated datasets
+poly_degrees <- 1:12      # Model complexity
+
+# Storage for results
+results <- data.frame(
+  degree = integer(),
+  bias2 = numeric(),
+  variance = numeric(),
+  total_error = numeric()
+)
+
+# ---------------------------------------------------
+# 3. Compute Bias^2, Variance, and Total Error
+# ---------------------------------------------------
+for (deg in poly_degrees) {
+  
+  preds <- matrix(0, nrow=num_sims, ncol=n)
+  
+  for (i in 1:num_sims) {
+    y_noise <- true_y + rnorm(n, sd=0.3)
+    model <- lm(y_noise ~ poly(x_vals, degree=deg, raw=TRUE))
+    preds[i, ] <- predict(model)
+  }
+  
+  mean_preds <- colMeans(preds)
+  
+  bias2 <- mean((mean_preds - true_y)^2)
+  variance <- mean(apply(preds, 2, var))
+  total_error <- bias2 + variance
+  
+  results <- rbind(results,
+                   data.frame(
+                     degree = deg,
+                     bias2 = bias2,
+                     variance = variance,
+                     total_error = total_error))
+}
+
+# ---------------------------------------------------
+# 4. Plot the Bias–Variance tradeoff
+# ---------------------------------------------------
+
+results_long <- results %>%
+  tidyr::pivot_longer(cols = c("bias2","variance","total_error"),
+                      names_to = "type", values_to = "value")
+
+ggplot(results_long, aes(x = degree, y = value, color = type)) +
+  geom_line(size = 1.2) +
+  labs(title = "Bias–Variance Tradeoff",
+       x = "Model Complexity (Polynomial Degree)",
+       y = "Error",
+       color = "Component") +
+  theme_minimal()
+
+# ---------------------------------------------------
+# 5. Visualize underfitting vs overfitting
+# ---------------------------------------------------
+
+make_plot <- function(deg){
+  y_noise <- true_y + rnorm(n, sd=0.3)
+  model <- lm(y_noise ~ poly(x_vals, degree=deg, raw=TRUE))
+  
+  df_plot <- data.frame(
+    x = x_vals,
+    true = true_y,
+    fitted = predict(model)
+  )
+  
+  ggplot(df_plot, aes(x)) +
+    geom_line(aes(y=true), color="black", size=1.2) +
+    geom_line(aes(y=fitted), color="blue", size=1) +
+    labs(title = paste("Model Fit: Polynomial Degree =", deg),
+         y = "y") +
+    theme_minimal()
+}
+
+# Show low-complexity (underfit), medium, and high-complexity (overfit)
+make_plot(1)
+make_plot(5)
+make_plot(12)
+
+```

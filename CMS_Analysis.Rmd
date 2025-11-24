@@ -15,7 +15,7 @@ This is an exercise for an interview for the company of Clipboard Health, datase
 
 We can observe that the dataset consists of attributes such as provider, city, state, county, and hours worked for the occupations of CNA, LPN, and RN.  For this study, we will focus on the first quarter of 2024.  We are interested in exploring the measures of central tendency and measures of spread based on the geography.  Theoretically, we could explore how hours worked depends on the demographics of the population including gender, age, and nationality, but for simplicity, we will focus on geography.  
 
-```{r, echo = FALSE}
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
 
 # PBJ Daily Nurse Staffing Q12024 Analysis
 ## -- S1: Load packages -- ##
@@ -95,7 +95,7 @@ df_ga_gwinnett %>% select_if(is.numeric) %>% skim() %>% select(-n_missing)
 We ask if there is a statistical difference between the population averages of hours worked by Licensed Practical Nurses (LPN's) between the states of Florida and Georgia.  Using a two sided T-test with a significance factor of 5%, we observe that there is no difference in population averages, but there is a statistical difference in the variances.  This suggests that there is a greater variability in the hours worked by LPN's (see density and histogram plots for FL vs GA).  We achieve similar results when comparing hours worked by Registered Nurses (RN's) in Gwinnett and Fulton counties (from Georgia).  
 
 
-```{r Hypothesis Testing, echo=FALSE}
+```{r Hypothesis Testing, echo = FALSE, warning = FALSE, message = FALSE}
 
 # Apply hypothesis testing for average and variance between states and counties
 
@@ -140,7 +140,7 @@ if (Fstat_gwfu[3]$p.value <= 0.05)
 
 We would like to visualize the previous results of our analysis.  Let us recall, that the averages of hours worked for RN's varies by states and counties.  Not only is there a statistical significant difference between the average, but the shape of the distribution is quite distinct, which is apparent by looking at the PDF and CDF plots.  
 
-```{r, echo = FALSE}
+```{r, echo = FALSE, warning = FALSE, message = FALSE}
 ## -- Plotting Section -- ##
 # Filter data for cleaner plots (remove outliers)
 # Boxplots

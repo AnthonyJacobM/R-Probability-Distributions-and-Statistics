@@ -1,0 +1,64 @@
+---
+title: "Double-Angle Identity Illustrations"
+author: "Anthony Morciglio"
+date: "11/16/2025"
+output: html_document
+---
+
+```{r, echo=TRUE, message=FALSE}
+library(ggplot2)
+
+# Create theta values
+theta <- seq(-pi, pi, length.out = 1000)
+
+# Compute functions
+sin_theta <- sin(theta)
+cos_theta <- cos(theta)
+tan_theta <- tan(theta)
+
+# Double-angle identities
+sin_double <- 2 * sin_theta * cos_theta
+cos_double <- cos(theta)^2 - sin(theta)^2
+tan_double <- (2 * tan_theta) / (1 - tan_theta^2)
+
+# Data frame for plotting
+df <- data.frame(
+  theta = theta,
+  sin_theta = sin_theta,
+  sin_double = sin_double,
+  cos_theta = cos_theta,
+  cos_double = cos_double,
+  tan_theta = tan_theta,
+  tan_double = tan_double
+)
+
+### Plot 1: Sine Double Angle
+ggplot(df, aes(x = theta)) +
+  geom_line(aes(y = sin_theta), color = "blue", linewidth = 1) +
+  geom_line(aes(y = sin_double), color = "red", linewidth = 1) +
+  labs(title = "Double Angle Identity for Sine",
+       y = "Function Value",
+       color = "Legend") +
+  theme_minimal()
+
+### Plot 2: Cosine Double Angle
+ggplot(df, aes(x = theta)) +
+  geom_line(aes(y = cos_theta), color = "blue", linewidth = 1) +
+  geom_line(aes(y = cos_double), color = "red", linewidth = 1) +
+  labs(title = "Double Angle Identity for Cosine",
+       y = "Function Value",
+       color = "Legend") +
+  theme_minimal()
+
+### Plot 3: Tangent Double Angle
+# Restrict plot to avoid vertical asymptotes
+df2 <- df[abs(df$tan_theta) < 10 & abs(df$tan_double) < 10, ]
+
+ggplot(df2, aes(x = theta)) +
+  geom_point(aes(y = tan_theta), color = "blue", linewidth = 1) +
+  geom_point(aes(y = tan_double), color = "red", linewidth = 1) +
+  labs(title = "Double Angle Identity for Tangent",
+       y = "Function Value",
+       color = "Legend") +
+  theme_minimal()
+```

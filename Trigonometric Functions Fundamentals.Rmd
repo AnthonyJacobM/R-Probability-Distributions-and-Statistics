@@ -1,0 +1,89 @@
+---
+title: "Trigonometric Functions Fundamentals"
+author: "Anthony Morciglio"
+date: "11/12/2025"
+output: html_document
+---
+
+## Visualizing the Trigonometric Functions and Their Unit Circle Projections
+
+The following R code visually demonstrates the relationship between the three primary trigonometric functions—sine, cosine, and tangent—and their geometric interpretations on the **unit circle**.
+
+- The **unit circle plot** shows how a point rotates around the origin for a given angle θ.  
+- The **projections** of that point onto the x-axis and y-axis correspond to **cos(θ)** and **sin(θ)** respectively.  
+- The **tangent** is represented as the slope of the radius vector, or equivalently, the vertical distance of the line tangent to the circle at \( (1,0) \).  
+- The function plots show how each trigonometric function varies continuously with θ from 0 to 2π.
+
+All plots are arranged together for a cohesive view of both the geometric and analytic representations of trigonometric functions.
+
+
+```{r setup, warning = FALSE, message = FALSE, echo = TRUE}
+# Load required libraries
+library(ggplot2)
+library(dplyr)
+library(patchwork)
+
+# Define theta (angles) and trigonometric values
+theta <- seq(0, 2*pi, length.out = 400)
+df <- data.frame(
+  theta = theta,
+  x = cos(theta),
+  y = sin(theta),
+  tan = tan(theta)
+)
+
+# Unit circle plot with projections
+theta_highlight <- pi/4  # Example angle for projection (45 degrees)
+highlight <- data.frame(
+  theta = theta_highlight,
+  x = cos(theta_highlight),
+  y = sin(theta_highlight)
+)
+
+circle_plot <- ggplot(df, aes(x, y)) +
+  geom_path(color = "gray40", linewidth = 1.1) +
+  geom_hline(yintercept = 0, color = "gray60") +
+  geom_vline(xintercept = 0, color = "gray60") +
+  geom_point(data = highlight, aes(x, y), color = "blue", size = 3) +
+  geom_segment(data = highlight, aes(xend = x, yend = 0), color = "red", linetype = "dashed") +
+  geom_segment(data = highlight, aes(xend = 0, yend = y), color = "black", linetype = "dashed") +
+  coord_equal() +
+  theme_minimal() +
+  ggtitle("Unit Circle and Trigonometric Projections") +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+# Sine function plot
+sin_plot <- ggplot(df, aes(x = theta, y = y)) +
+  geom_line(color = "black", linewidth = 1.2) +
+  geom_vline(xintercept = theta_highlight, linetype = "dotted") +
+  geom_point(aes(x = theta_highlight, y = sin(theta_highlight)), color = "black", size = 3) +
+  labs(title = "Sine Function: y = sin(θ)", x = "θ (radians)", y = "sin(θ)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+# Cosine function plot
+cos_plot <- ggplot(df, aes(x = theta, y = x)) +
+  geom_line(color = "red", linewidth = 1.2) +
+  geom_vline(xintercept = theta_highlight, linetype = "dotted") +
+  geom_point(aes(x = theta_highlight, y = cos(theta_highlight)), color = "red", size = 3) +
+  labs(title = "Cosine Function: y = cos(θ)", x = "θ (radians)", y = "cos(θ)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+# Tangent function plot (limited range to avoid infinities)
+df_tan <- df %>% filter(abs(tan) < 5)
+tan_plot <- ggplot(df_tan, aes(x = theta, y = tan)) +
+  geom_point(color = "blue", linewidth = 1.2) +
+  geom_vline(xintercept = theta_highlight, linetype = "dotted") +
+  geom_point(aes(x = theta_highlight, y = tan(theta_highlight)), color = "blue", size = 3) +
+  labs(title = "Tangent Function: y = tan(θ)", x = "θ (radians)", y = "tan(θ)") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"))
+
+# Combine plots using patchwork
+(circle_plot | (sin_plot / cos_plot / tan_plot)) +
+  plot_annotation(
+    title = "Trigonometric Functions and Their Unit Circle Connections",
+    theme = theme(plot.title = element_text(hjust = 0.5, size = 16, face = "bold"))
+  )
+```

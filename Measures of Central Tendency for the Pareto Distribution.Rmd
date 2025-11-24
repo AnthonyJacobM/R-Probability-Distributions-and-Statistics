@@ -1,0 +1,152 @@
+---
+title: "Measures of Central Tendency and Spread of the Pareto Distribution"
+author: "Anthony Morciglio"
+date: "11/24/2025"
+output: html_document
+---
+
+## Overview
+
+This R Markdown document explores the measures of central tendency and spread for the **Pareto distribution**, a heavy-tailed distribution widely used in economics, finance, reliability engineering, and the study of extreme events.
+
+The analysis focuses on two main objectives:
+
+### **1. Compute analytical measures for a fixed shape parameter α = 2.5**
+
+For a Pareto distribution with scale parameter \(x_m = 1\), the following theoretical quantities are computed:
+
+- **Mean** (exists when \( \alpha > 1 \))  
+- **Median** (always exists)  
+- **Mode** (always exists)  
+- **Variance** (exists when \( \alpha > 2 \))
+
+These values are derived using closed-form expressions and stored in a summary table.
+
+### **2. Illustrate how the measures evolve as α varies**
+
+A sensitivity analysis is performed by allowing the shape parameter \( \alpha \) to vary from **2 to 5**, showing how changes in α affect:
+
+- **Average (Mean)**
+- **Median**
+- **Mode**
+- **Variance**
+
+This range is chosen because variance becomes undefined at \( \alpha \leq 2 \), reflecting the heavy-tail behavior of the distribution.
+
+### **3. Visualizations**
+
+Two sets of plots are generated:
+
+1. **Central Tendency vs. α**  
+   A line plot illustrating how the mean, median, and mode respond to increases in α, demonstrating how heavier or lighter tails affect the distribution's center.
+
+2. **Variance vs. α**  
+   A separate plot showing how variance decreases as α increases, reflecting the thinning of tails for larger α.
+
+### **Summary**
+
+This document provides both:
+- **Analytical formulas** for the Pareto distribution’s central tendency and spread, and  
+- **Graphical insights** into how these quantities change when adjusting the tail-heaviness parameter α.
+
+Together, they illustrate the critical role that α plays in determining the behavior and stability of the Pareto distribution.
+
+
+```{r CT & Spread Pareto, echo=TRUE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+
+# -------------------------------
+# Pareto distribution functions
+# -------------------------------
+
+# Mean exists only for alpha > 1
+pareto_mean <- function(alpha, xm = 1) {
+  if(alpha <= 1) return(NA)
+  return(alpha * xm / (alpha - 1))
+}
+
+# Median (always exists)
+pareto_median <- function(alpha, xm = 1) {
+  xm * 2^(1/alpha)
+}
+
+# Mode (always exists)
+pareto_mode <- function(alpha, xm = 1) {
+  xm
+}
+
+# Variance exists only for alpha > 2
+pareto_variance <- function(alpha, xm = 1) {
+  if(alpha <= 2) return(NA)
+  return((alpha * xm^2) / ((alpha - 1)^2 * (alpha - 2)))
+}
+
+# -------------------------------
+# Compute values for alpha = 2.5
+# -------------------------------
+
+alpha0 <- 2.5
+xm <- 1
+
+mean_val    <- pareto_mean(alpha0, xm)
+median_val  <- pareto_median(alpha0, xm)
+mode_val    <- pareto_mode(alpha0, xm)
+var_val     <- pareto_variance(alpha0, xm)
+
+results_df <- data.frame(
+  Measure = c("Mean", "Median", "Mode", "Variance"),
+  Value = c(mean_val, median_val, mode_val, var_val)
+)
+
+results_df
+
+# -------------------------------
+# Sensitivity analysis:
+# vary alpha from 2 to 5
+# -------------------------------
+
+alpha_seq <- seq(2.01, 5, by = 0.05)  # start slightly above 2 to avoid variance blowup
+
+df <- data.frame(
+  alpha = alpha_seq,
+  mean = sapply(alpha_seq, pareto_mean, xm = xm),
+  median = sapply(alpha_seq, pareto_median, xm = xm),
+  mode = sapply(alpha_seq, pareto_mode, xm = xm),
+  variance = sapply(alpha_seq, pareto_variance, xm = xm)
+)
+
+df_long <- df %>%
+  tidyr::pivot_longer(cols = -alpha, names_to = "measure", values_to = "value")
+
+# -------------------------------
+# Plot: Mean, Median, Mode vs α
+# -------------------------------
+
+custom_colors <- c("red",   # Red
+                   "blue", # Blue
+                   "black")   # Green
+
+ggplot(df_long %>% filter(measure %in% c("mean","median","mode")),
+       aes(x = alpha, y = value, color = measure)) +
+  geom_line(size = 1.2) +
+  scale_color_manual(values = c("red", "blue", "black")) + 
+  labs(title = "Central Tendency Measures vs Shape Parameter α",
+       x = expression(alpha),
+       y = "Value",
+       color = "Measure") +
+  theme_minimal(base_size = 14)
+
+# -------------------------------
+# Plot: Variance vs α
+# -------------------------------
+
+ggplot(df, aes(x = alpha, y = variance)) +
+  geom_line(size = 1.2) +
+  labs(title = "Variance of the Pareto Distribution vs α",
+       x = expression(alpha),
+       y = "Variance") +
+  theme_minimal(base_size = 14)
+
+```
+

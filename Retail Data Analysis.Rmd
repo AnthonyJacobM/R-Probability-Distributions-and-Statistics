@@ -1,0 +1,586 @@
+---
+title: "Retail Data Analysis"
+author: "Anthony Morciglio"
+date: "11/14/2025"
+output: html_document
+---
+
+```{r Retail-Data-Analysis, echo=TRUE, message=FALSE, warning=FALSE}
+
+##############################################################################
+# Full analysis pipeline for retail Weekly_Sales dataset
+# Columns expected:
+# Store (nominal), Dept (nominal), Date, Weekly_Sales (numeric),
+# IsHoliday.x (logical/boolean or factor), Temperature (numeric),
+# Fuel_Price (numeric), CPI (numeric), Unemployment (numeric),
+# IsHoliday.y (logical/boolean or factor), Type (categorical A/B/C),
+# Size (numeric)
+#
+# Save as: retail_analysis.R and run in R/RStudio
+##############################################################################
+
+# -------------------------------
+# 0. Setup: packages and helpers
+# -------------------------------
+required_pkgs <- c(
+  "tidyverse", "lubridate", "skimr", "ggpubr", "broom", "fitdistrplus",
+  "car", "moments", "nortest", "randomForest", "caret", "pROC", "vip",
+  "gridExtra"
+)
+
+installed <- rownames(installed.packages())
+for (p in required_pkgs) {
+  if (!p %in% installed) {
+    install.packages(p, dependencies = TRUE)
+  }
+}
+library(tidyverse)
+library(lubridate)
+library(skimr)
+library(ggpubr)
+library(broom)
+library(fitdistrplus)
+library(car)
+library(moments)
+library(nortest)
+library(randomForest)
+library(caret)
+library(vip)
+library(gridExtra)
+
+set.seed(42)
+
+# -------------------------------
+# 1. Load data
+# -------------------------------
+# Update path if necessary
+path <- "C:/Users/Anthony Morciglio/OneDrive/Documents/Work/Personal Projects/Portfolio/Retail Data Project";
+data_path <- file.path(path, "combined_dataset_final.csv");
+
+if (!file.exists(data_path)) {
+  stop(paste0("Data file not found at '", data_path, "'. Please place your CSV there or change data_path."))
+}
+
+df_raw <- read_csv(data_path, show_col_types = FALSE)
+
+# Quick look at column names
+cat("Columns in dataset:\n")
+print(colnames(df_raw))
+
+# -------------------------------
+# 2. Clean & prepare data
+# -------------------------------
+df <- df_raw %>%
+  # Standardize column names (optional)
+  rename_with(~ str_replace_all(., "\\.", "_")) %>%
+  mutate(
+    # Parse dates (tries common formats; adjust format if needed)
+    Date = parse_date_time(Date, orders = c("Ymd", "Y-m-d", "m/d/Y", "d/m/Y", "Y/m/d")),
+    # Ensure categorical types
+    Store = as.factor(Store),
+    Dept = as.factor(Dept),
+    Type = as.factor(Type),
+    # Convert holiday flags (both variants) to logical/factor
+    IsHoliday_x = case_when(
+      !is.na(IsHoliday_x) ~ as.logical(IsHoliday_x),
+      !is.na(IsHoliday_y) ~ as.logical(IsHoliday_y),
+      TRUE ~ NA
+    ),
+    IsHoliday = coalesce(IsHoliday_x, IsHoliday_y),
+    IsHoliday = if_else(is.na(IsHoliday), FALSE, IsHoliday),
+    # Numeric conversions (some CSVs have them as text)
+    Weekly_Sales = as.numeric(Weekly_Sales),
+    Temperature = as.numeric(Temperature),
+    Fuel_Price = as.numeric(Fuel_Price),
+    CPI = as.numeric(CPI),
+    Unemployment = as.numeric(Unemployment),
+    Size = as.numeric(Size),
+    # Time features
+    Month = month(Date, label = TRUE, abbr = TRUE),
+    Year = year(Date),
+    Quarter = quarter(Date),
+    DayOfWeek = wday(Date, label = TRUE, abbr = TRUE),
+    # Season: Northern hemisphere convention
+    Season = case_when(
+      Month %in% c("Dec", "Jan", "Feb") ~ "Winter",
+      Month %in% c("Mar", "Apr", "May") ~ "Spring",
+      Month %in% c("Jun", "Jul", "Aug") ~ "Summer",
+      Month %in% c("Sep", "Oct", "Nov") ~ "Fall",
+      TRUE ~ NA_character_
+    )
+  ) %>%
+  mutate(
+    Season = factor(Season, levels = c("Winter", "Spring", "Summer", "Fall")),
+    Type = as.factor(Type),
+    IsHoliday = as.factor(IsHoliday)
+  )
+
+# Basic filtering: remove rows with missing Date or Weekly_Sales
+df <- df %>% filter(!is.na(Date) & !is.na(Weekly_Sales))
+
+# Print dimensions
+cat("Dataset dimensions: ", dim(df), "\n")
+
+# -------------------------------
+# 3. Descriptive statistics
+# -------------------------------
+cols_num <- c("Weekly_Sales", "Temperature", "Fuel_Price", "CPI", "Unemployment", "Size");
+#cat("Numeric variables: ", paste(num_vars, collapse = ", "), "\n");
+
+# summary using skimr
+tmp <- dplyr::select(df, cols_num);
+skim_df <- skim(tmp);
+print(skim_df);
+num_vars <- cols_num;
+
+# compute classical summary
+desc_stats <- df %>%
+  dplyr::select((num_vars)) %>%
+  summarise_all(list(
+    n = ~sum(!is.na(.)),
+    mean = ~mean(., na.rm = TRUE),
+    median = ~median(., na.rm = TRUE),
+    sd = ~sd(., na.rm = TRUE),
+    var = ~var(., na.rm = TRUE),
+    IQR = ~IQR(., na.rm = TRUE),
+    skew = ~skewness(., na.rm = TRUE),
+    kurt = ~kurtosis(., na.rm = TRUE),
+    min = ~min(., na.rm = TRUE),
+    max = ~max(., na.rm = TRUE)
+  )) %>%
+  pivot_longer(everything(), names_to = "stat", values_to = "value") 
+
+# Reshape for easier reading
+desc_stats_tidy <- df %>%
+  summarise(across((num_vars), list(
+    mean = ~mean(., na.rm = TRUE),
+    median = ~median(., na.rm = TRUE),
+    sd = ~sd(., na.rm = TRUE),
+    IQR = ~IQR(., na.rm = TRUE),
+    skew = ~skewness(., na.rm = TRUE),
+    kurt = ~kurtosis(., na.rm = TRUE)
+  ), .names = "{col}_{fn}")) %>%
+  pivot_longer(everything(), names_to = "metric", values_to = "value")
+
+print(desc_stats_tidy)
+
+# -------------------------------
+# 4. Distribution fitting & diagnostics
+# -------------------------------
+# We'll attempt to fit common distributions for Weekly_Sales and Temperature.
+# Weekly_Sales: candidate log-normal, gamma, normal (often right-skewed)
+# Temperature: often approximately normal (seasonal)
+library(fitdistrplus)
+
+fit_dists <- function(x, varname) {
+  x <- na.omit(x)
+  cat("Fitting distributions for:", varname, "\n")
+  # transform if necessary
+  if (min(x) <= 0) {
+    # for lognormal/gamma, need positive; shift if necessary
+    shift <- abs(min(x)) + 1e-6
+    x_pos <- x + shift
+  } else {
+    shift <- 0
+    x_pos <- x
+  }
+  fits <- list()
+  # try normal
+  fits$norm <- tryCatch(fitdist(x, "norm"), error = function(e) NULL)
+  fits$lnorm <- tryCatch(fitdist(x_pos, "lnorm"), error = function(e) NULL)
+  fits$gamma <- tryCatch(fitdist(x_pos, "gamma"), error = function(e) NULL)
+  # compare with gofstat
+  gof <- lapply(fits, function(f) if (!is.null(f)) gofstat(f) else NULL)
+  return(list(fits = fits, gof = gof, shift = shift))
+}
+
+# Example for Weekly_Sales
+ws_fit <- fit_dists(df$Weekly_Sales, "Weekly_Sales")
+# Example for Temperature
+temp_fit <- fit_dists(df$Temperature, "Temperature")
+
+# Print AIC/BIC if available
+if (!is.null(ws_fit$fits$lnorm)) {
+  cat("Weekly_Sales fit AICs: \n")
+  print(sapply(ws_fit$fits, function(x) if(!is.null(x)) x$aic else NA))
+}
+
+# Plot histogram with fitted curves for Weekly_Sales
+plot_fitted <- function(x, fit_list, shift = 0, main = "Variable") {
+  x <- na.omit(x)
+  df_plot <- data.frame(x = x)
+  p <- ggplot(df_plot, aes(x = x)) +
+    geom_histogram(aes(y = ..density..), bins = 60, fill = "#d3d3d3", color = "black", alpha = 0.6) +
+    theme_minimal() +
+    labs(title = paste("Histogram and fitted densities:", main), x = main, y = "Density")
+  # add fitted densities if present
+  xseq <- seq(min(x), max(x), length.out = 1000)
+  if (!is.null(fit_list$norm)) {
+    params <- fit_list$norm$estimate
+    p <- p + stat_function(fun = dnorm, args = list(mean = params["mean"], sd = params["sd"]), color = "blue", size = 1)
+  }
+  if (!is.null(fit_list$lnorm)) {
+    params <- fit_list$lnorm$estimate
+    # remember shift
+    p <- p + stat_function(fun = function(v) dlnorm(v + shift, meanlog = params["meanlog"], sdlog = params["sdlog"]), color = "red", size = 1)
+  }
+  if (!is.null(fit_list$gamma)) {
+    params <- fit_list$gamma$estimate
+    p <- p + stat_function(fun = function(v) dgamma(v + shift, shape = params["shape"], rate = params["rate"]), color = "darkgreen", size = 1)
+  }
+  return(p)
+}
+
+p_ws_fit <- plot_fitted(df$Weekly_Sales, ws_fit$fits, shift = ws_fit$shift, main = "Weekly_Sales")
+p_temp_fit <- plot_fitted(df$Temperature, temp_fit$fits, shift = temp_fit$shift, main = "Temperature")
+
+ggsave("Weekly_Sales_fit.png", p_ws_fit, width = 8, height = 5)
+ggsave("Temperature_fit.png", p_temp_fit, width = 8, height = 5)
+
+# -------------------------------
+# 5. Visualizations (Categorical vs Numeric)
+# -------------------------------
+# Boxplots of Weekly_Sales by Type
+p1 <- ggplot(df, aes(x = Type, y = Weekly_Sales)) +
+  geom_boxplot(outlier.size = 0.8) +
+  stat_summary(fun = mean, geom = "point", shape = 20, color = "red", size = 2) +
+  labs(title = "Weekly Sales by Store Type", y = "Weekly Sales")
+
+# Violin plot: Holiday vs Non-holiday
+p2 <- ggplot(df, aes(x = IsHoliday, y = Weekly_Sales, fill = IsHoliday)) +
+  geom_violin(trim = TRUE) + geom_boxplot(width = 0.1, outlier.size = 0.6) +
+  labs(title = "Weekly Sales: Holiday vs Non-holiday", y = "Weekly Sales")
+
+# Boxplot: Weekly_Sales by Season
+p3 <- ggplot(df, aes(x = Season, y = Weekly_Sales)) +
+  geom_boxplot() + stat_summary(fun = mean, geom = "point", color = "red") +
+  labs(title = "Weekly Sales by Season")
+
+# Histogram & density of Weekly_Sales (log scale)
+p4 <- ggplot(df, aes(x = Weekly_Sales)) +
+  geom_histogram(aes(y = ..density..), bins = 80, fill = "lightblue", color = "black") +
+  geom_density(color = "darkblue", size = 1) +
+  scale_x_continuous(trans = "log1p") +
+  labs(title = "Histogram and Density of Weekly Sales (log scale)")
+
+# Facet by Type: density
+p5 <- ggplot(df, aes(x = Weekly_Sales, color = Type, fill = Type)) +
+  geom_density(alpha = 0.2) +
+  scale_x_continuous(trans = "log1p") +
+  labs(title = "Density of Weekly Sales by Type (log scale)")
+
+# Save visuals
+ggsave("Boxplot_Type_WeeklySales.png", p1, width = 7, height = 5)
+ggsave("Violin_Holiday_WeeklySales.png", p2, width = 7, height = 5)
+ggsave("Boxplot_Season_WeeklySales.png", p3, width = 7, height = 5)
+ggsave("Hist_Density_WeeklySales.png", p4, width = 7, height = 5)
+ggsave("Density_By_Type_WeeklySales.png", p5, width = 7, height = 5)
+
+# -------------------------------
+# 6. Time series plots & seasonal patterns
+# -------------------------------
+# Aggregate weekly sales over time (all stores)
+ts_all <- df %>%
+  group_by(Date) %>%
+  summarise(total_weekly_sales = sum(Weekly_Sales, na.rm = TRUE)) %>%
+  arrange(Date)
+
+p_ts <- ggplot(ts_all, aes(x = Date, y = total_weekly_sales)) +
+  geom_line(color = "steelblue") +
+  geom_smooth(method = "loess", se = FALSE, color = "darkred") +
+  labs(title = "Total weekly sales over time (all stores)", y = "Total Weekly Sales")
+
+ggsave("TimeSeries_TotalWeeklySales.png", p_ts, width = 9, height = 4)
+
+# Seasonal boxplots by month
+monthly <- df %>%
+  group_by(Year, Month) %>%
+  summarise(monthly_sales = sum(Weekly_Sales, na.rm = TRUE)) %>%
+  ungroup()
+
+p_month_box <- ggplot(df, aes(x = Month, y = Weekly_Sales)) +
+  geom_boxplot() +
+  labs(title = "Weekly Sales by Month (boxplots)")
+
+ggsave("WeeklySales_by_Month_Boxplot.png", p_month_box, width = 9, height = 4)
+
+# -------------------------------
+# 7. Inferential statistics
+# -------------------------------
+
+# 7.1 Confidence intervals for means (Weekly_Sales overall and by Type)
+ci_mean <- function(x, conf = 0.95) {
+  x <- na.omit(x)
+  n <- length(x)
+  m <- mean(x)
+  s <- sd(x)
+  se <- s / sqrt(n)
+  alpha <- 1 - conf
+  t_crit <- qt(1 - alpha/2, df = n - 1)
+  lower <- m - t_crit * se
+  upper <- m + t_crit * se
+  tibble(n = n, mean = m, sd = s, se = se, lower = lower, upper = upper)
+}
+
+ci_overall <- ci_mean(df$Weekly_Sales)
+cat("95% CI for overall Weekly_Sales mean:\n")
+print(ci_overall)
+
+ci_by_type <- df %>%
+  group_by(Type) %>%
+  summarise(ci = list(ci_mean(Weekly_Sales))) %>%
+  unnest(ci)
+
+print(ci_by_type)
+
+# 7.2 Hypothesis testing
+# A) Does Type (A/B/C) affect Weekly Sales? Use ANOVA (plus Kruskal-Wallis if non-normal)
+anova_mod <- aov(Weekly_Sales ~ Type, data = df)
+anova_summary <- summary(anova_mod)
+print(anova_summary)
+
+# Check assumptions: normality of residuals and homogeneity of variances
+resid_anova <- residuals(anova_mod)
+print(length(resid_anova))
+cat("Shapiro test for ANOVA residuals:\n")
+print(shapiro.test(sample(resid_anova, 1000)))
+cat("Levene Test for homogeneity:\n")
+print(leveneTest(Weekly_Sales ~ Type, data = df))
+
+# If ANOVA significant, Tukey HSD:
+if (anova_summary[[1]][["Pr(>F)"]][1] < 0.05) {
+  cat("ANOVA significant: performing Tukey HSD\n")
+  print(TukeyHSD(anova_mod))
+} else {
+  cat("ANOVA not significant at alpha=0.05\n")
+}
+
+# Kruskal-Wallis as nonparametric alternative
+kruskal_res <- kruskal.test(Weekly_Sales ~ Type, data = df)
+print(kruskal_res)
+
+# B) Holiday effect: two-sample t-test (Holiday vs Non-holiday)
+# Check group sizes
+table(df$IsHoliday)
+holiday_group <- df %>% filter(IsHoliday == "TRUE") %>% pull(Weekly_Sales)
+nonholiday_group <- df %>% filter(IsHoliday != "TRUE") %>% pull(Weekly_Sales)
+
+# Non-equal variance t-test
+t_test_holiday <- t.test(holiday_group, nonholiday_group, var.equal = FALSE)
+print(t_test_holiday)
+
+# Wilcoxon rank-sum test (nonparametric)
+wilcox_res <- wilcox.test(holiday_group, nonholiday_group)
+print(wilcox_res)
+
+# 7.3 Seasonal effect (ANOVA across Season)
+anova_season <- aov(Weekly_Sales ~ Season, data = df)
+summary(anova_season)
+
+# -------------------------------
+# 8. Top 10 Departments & Stores (by cumulative sales)
+# -------------------------------
+top_depts <- df %>%
+  group_by(Dept) %>%
+  summarise(total_sales = sum(Weekly_Sales, na.rm = TRUE),
+            mean_sales = mean(Weekly_Sales, na.rm = TRUE),
+            n_obs = n()) %>%
+  arrange(desc(total_sales)) %>%
+  slice_head(n = 10)
+
+cat("Top 10 Departments by cumulative sales:\n")
+print(top_depts)
+
+top_stores <- df %>%
+  group_by(Store) %>%
+  summarise(total_sales = sum(Weekly_Sales, na.rm = TRUE),
+            mean_sales = mean(Weekly_Sales, na.rm = TRUE),
+            n_obs = n()) %>%
+  arrange(desc(total_sales)) %>%
+  slice_head(n = 10)
+
+cat("Top 10 Stores by cumulative sales:\n")
+print(top_stores)
+
+# Plot top 10 depts
+p_top_depts <- ggplot(top_depts, aes(x = reorder(as.character(Dept), total_sales), y = total_sales)) +
+  geom_col(fill = "steelblue") + coord_flip() + labs(title = "Top 10 Departments by Total Sales", x = "Dept", y = "Total Sales")
+ggsave("Top10_Depts.png", p_top_depts, width = 7, height = 5)
+
+# Plot top 10 stores
+p_top_stores <- ggplot(top_stores, aes(x = reorder(as.character(Store), total_sales), y = total_sales)) +
+  geom_col(fill = "darkgreen") + coord_flip() + labs(title = "Top 10 Stores by Total Sales", x = "Store", y = "Total Sales")
+ggsave("Top10_Stores.png", p_top_stores, width = 7, height = 5)
+
+# -------------------------------
+# 9. Regression modeling: Linear model (with diagnostics)
+# -------------------------------
+# Prepare modeling dataframe: select variables and handle NA
+# model_df <- df %>%
+#   dplyr::select(Weekly_Sales, Temperature, Fuel_Price, CPI, Unemployment, Type, Size, IsHoliday_x, Season, Dept, Store) %>%
+#   mutate(
+#     Type = droplevels(Type),
+#     IsHoliday = as.factor(IsHoliday_x),
+#     Season = as.factor(Season)
+#   ) %>%
+#   drop_na(Weekly_Sales, Temperature, Fuel_Price, CPI, Unemployment, Size, Type)
+# model_df <- drop_na(model_df) %>% sample(10000);
+# 
+# # Create dummy variables using model.matrix for linear model
+# model_lm <- lm(Weekly_Sales ~ Temperature + Fuel_Price + CPI + Unemployment + Size + Type + IsHoliday + Season, data = model_df)
+# summary_lm <- summary(model_lm)
+# print(summary_lm)
+# 
+# # Check multicollinearity
+# vif_vals <- vif(model_lm)
+# print(vif_vals)
+# 
+# # Diagnostic plots
+# png("LM_Diagnostic_1.png", width = 1200, height = 800)
+# par(mfrow = c(2,2))
+# plot(model_lm)
+# dev.off()
+# 
+# # If strong non-normality / heteroscedasticity, consider log-transforming Weekly_Sales
+# model_lm_log <- lm(log1p(Weekly_Sales) ~ Temperature + Fuel_Price + CPI + Unemployment + Size + Type + IsHoliday_x + Season, data = model_df)
+# summary(model_lm_log)
+
+
+### 9. Regression Modeling ---------------------------------------------
+
+# Make sure column names are syntactically valid
+names(df) <- make.names(names(df), unique = TRUE)
+
+# Convert categorical predictors to factors
+df$Store        <- as.factor(df$Store)
+df$Dept         <- as.factor(df$Dept)
+df$IsHoliday  <- factor(df$IsHoliday, levels = c(FALSE, TRUE))
+#df$IsHoliday.y  <- factor(df$IsHoliday.y, levels = c(FALSE, TRUE))
+df$Type         <- as.factor(df$Type)
+
+# Convert Date to a numeric "time index" (optional but helpful)
+df$Date <- as.Date(df$Date)
+df$TimeIndex <- as.numeric(df$Date - min(df$Date))  # days since start
+
+# Select modeling columns
+model_data <- df %>%
+  dplyr::select(
+    Weekly_Sales,
+    Temperature, Fuel_Price, CPI, Unemployment,
+    Store, Dept, IsHoliday, Type, Size, TimeIndex
+  )
+
+# Remove rows with missing values to avoid model errors
+model_data <- na.omit(model_data);
+model_df <- model_data;
+
+# Fit the linear regression model
+lm_model <- lm(Weekly_Sales ~ Temperature + Fuel_Price + CPI + Unemployment +
+                 Store + Dept + IsHoliday + Type + Size + TimeIndex,
+               data = model_data)
+
+#summary_lm <- summary(lm_model)
+
+# model_lm_long <- lm(log1p(Weekly_Sales) ~ Temperature + Fuel_Price + CPI + Unemployment + Store + Dept + IsHoliday + Type + Size + TimeIndex,
+#                data = model_data);
+#summary_model_lm_lomg <- summary(model_lm_long);
+
+# Model diagnostics
+par(mfrow = c(2,2))
+plot(lm_model)
+
+# Variable importance via absolute t-values
+importance <- abs(summary(lm_model)$coefficients[, "t value"])
+importance_sorted <- sort(importance, decreasing = TRUE)
+importance_sorted
+
+
+# -------------------------------
+# 10. Machine learning model: Random Forest for feature importance
+# -------------------------------
+# We'll predict Weekly_Sales (regression) using randomForest. For speed, sample if huge dataset
+set.seed(42)
+rf_df <- model_df %>% mutate(Weekly_Sales = as.numeric(Weekly_Sales))
+
+# If dataset too big, optionally sample
+if (nrow(rf_df) > 20000) {
+  rf_df <- rf_df %>% sample_n(20000)
+}
+
+# Partition data
+trainIndex <- createDataPartition(rf_df$Weekly_Sales, p = .8, list = FALSE)
+train <- rf_df[trainIndex, ]
+test  <- rf_df[-trainIndex, ]
+
+# Train random forest
+rf_formula <- as.formula("Weekly_Sales ~ Temperature + Fuel_Price + CPI + Unemployment + Size + Type + IsHoliday")
+rf_model <- randomForest(rf_formula, data = train, ntree = 300, importance = TRUE, na.action = na.omit)
+print(rf_model)
+
+# Variable importance plot
+png("RF_VariableImportance.png", width = 800, height = 600)
+vip(rf_model)
+dev.off()
+
+# Predict on test set and compute RMSE
+preds <- predict(rf_model, newdata = test)
+rmse <- sqrt(mean((preds - test$Weekly_Sales)^2, na.rm = TRUE))
+cat("Random Forest RMSE on test set:", rmse, "\n")
+
+# Partial dependence for top features (if desirable)
+top_vars <- names(sort(importance(rf_model, type = 1), decreasing = TRUE))[1:5]
+cat("Top variables by RF (incMSE):\n")
+print(top_vars)
+
+# -------------------------------
+# 11. Summarize & export key results
+# -------------------------------
+# Save CSVs for top results
+write_csv(top_depts, "top_10_departments.csv")
+write_csv(top_stores, "top_10_stores.csv")
+
+# Save model summaries
+sink("model_summaries.txt")
+cat("Linear model summary:\n")
+#print(summary_lm)
+cat("\nLinear model (log1p) summary:\n")
+#print(summary(model_lm_log))
+cat("\nRandom forest model:\n")
+print(rf_model)
+sink()
+
+# -------------------------------
+# 12. Example exploratory outputs: combined plot
+# -------------------------------
+# Arrange several plots in a grid for a quick report
+grid.arrange(p1 + ggtitle("Sales by Type"), p2 + ggtitle("Holiday vs Non-holiday"), p3 + ggtitle("By Season"), p4 + ggtitle("Histogram log scale"), ncol = 2)
+ggsave("Combined_Exploratory_Plots.png", width = 12, height = 8)
+
+# -------------------------------
+# 13. Next steps suggestions (printed)
+# -------------------------------
+cat("
+ANALYSIS COMPLETE. NEXT STEPS / RECOMMENDATIONS:
+- Inspect linear model diagnostics: residuals, heteroscedasticity. Consider log-transform if residuals non-normal.
+- Use hierarchical/mixed models if you want to model Store and Dept as random effects (lme4).
+- Use time-series models if forecasting is required (ARIMA, Prophet) after aggregating per store/time.
+- Consider feature interactions (e.g., Season:Type, Temperature:IsHoliday) and non-linear terms.
+- Use SHAP values (via xgboost + SHAP) for deeper feature explanations.
+- Add cross-validation and tuning for RF/XGBoost for more robust importance measures.
+
+Files created in working directory:
+- Weekly_Sales_fit.png, Temperature_fit.png, Boxplot_Type_WeeklySales.png
+- Violin_Holiday_WeeklySales.png, Boxplot_Season_WeeklySales.png, Hist_Density_WeeklySales.png
+- Density_By_Type_WeeklySales.png, TimeSeries_TotalWeeklySales.png
+- WeeklySales_by_Month_Boxplot.png, Top10_Depts.png, Top10_Stores.png
+- LM_Diagnostic_1.png, RF_VariableImportance.png, Combined_Exploratory_Plots.png
+- top_10_departments.csv, top_10_stores.csv, model_summaries.txt
+
+")
+
+##############################################################################
+# End of script
+##############################################################################
+
+```
+

@@ -1,0 +1,125 @@
+---
+title: "Illustrating the Law of Cosines and the Pythagorean Identity"
+author: "Anthony Morciglio"
+date: "11/16/2025"
+output: html_document
+---
+
+## Introduction
+
+The following R code illustrates both the **Law of Cosines** and the **Pythagorean Identity** using geometric visualizations.
+
+### What the code does:
+
+1. **General Triangle (Law of Cosines)**  
+   - Generates three random points in the plane.  
+   - Computes the side lengths.  
+   - Computes the angle opposite one of the sides using the Law of Cosines.  
+   - Plots the triangle with labeled vertices and side lengths.
+
+2. **Right Triangle (Pythagorean Identity)**  
+   - Constructs a right triangle manually.  
+   - Computes the three side lengths.  
+   - Verifies that \(a^2 + b^2 = c^2\).  
+   - Plots the right triangle, labeling the legs and hypotenuse.
+
+3. **Visualization**  
+   - Two plots are displayed:  
+     - A general triangle (Law of Cosines)  
+     - A right triangle (Pythagorean Identity)
+
+---
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+
+library(ggplot2)
+library(dplyr)
+library(gridExtra)
+
+### -----------------------------------------------------------
+### PART 1 — General Triangle: Visualizing the Law of Cosines
+### -----------------------------------------------------------
+
+set.seed(123)
+
+# Generate random triangle vertices
+A <- c(0, 0)
+B <- c(runif(1, 1, 4), runif(1, 2, 5))
+C <- c(runif(1, 2, 5), runif(1, 0, 3))
+
+# Compute distances
+dist <- function(P, Q) sqrt(sum((P - Q)^2))
+a <- dist(B, C)  # side opposite vertex A
+b <- dist(A, C)  # side opposite vertex B
+c <- dist(A, B)  # side opposite vertex C
+
+# Compute angle at A using Law of Cosines
+angle.A <- acos((b^2 + c^2 - a^2) / (2 * b * c)) * 180/pi
+
+triangle_df <- data.frame(
+  x = c(A[1], B[1], C[1]),
+  y = c(A[2], B[2], C[2]),
+  label = c("A", "B", "C")
+)
+
+plot_triangle <- ggplot(triangle_df, aes(x, y)) +
+  geom_polygon(fill = "skyblue2", alpha = 0.4, color = "black") +
+  geom_point(size = 3) +
+  geom_text(aes(label = label), vjust = -1) +
+  annotate("text", x = (B[1]+C[1])/2, y = (B[2]+C[2])/2,
+           label = paste0("a = ", round(a,2)), color = "red") +
+  annotate("text", x = (A[1]+C[1])/2, y = (A[2]+C[2])/2,
+           label = paste0("b = ", round(b,2)), color = "blue") +
+  annotate("text", x = (A[1]+B[1])/2, y = (A[2]+B[2])/2,
+           label = paste0("c = ", round(c,2)), color = "purple") +
+  ggtitle("General Triangle: Illustration of the Law of Cosines") +
+  theme_minimal()
+
+
+### -----------------------------------------------------------
+### PART 2 — Right Triangle: Pythagorean Identity
+### -----------------------------------------------------------
+
+# Construct a right triangle
+A2 <- c(0, 0)
+B2 <- c(4, 0)
+C2 <- c(0, 3)
+
+a2 <- dist(B2, C2)  # hypotenuse
+b2 <- dist(A2, C2)
+c2 <- dist(A2, B2)
+
+# Check Pythagorean theorem
+pythag_check <- a2^2 - (b2^2 + c2^2)
+
+triangle_df2 <- data.frame(
+  x = c(A2[1], B2[1], C2[1]),
+  y = c(A2[2], B2[2], C2[2]),
+  label = c("A", "B", "C")
+)
+
+plot_right_triangle <- ggplot(triangle_df2, aes(x, y)) +
+  geom_polygon(fill="lightgreen", alpha=0.4, color="black") +
+  geom_point(size=3) +
+  geom_text(aes(label=label), vjust=-1) +
+  annotate("text", x = (A2[1]+B2[1])/2, y = (A2[2]+B2[2])/2,
+           label = paste0("c = ", round(c2,2)), color="blue") +
+  annotate("text", x = (A2[1]+C2[1])/2, y = (A2[2]+C2[2])/2,
+           label = paste0("b = ", round(b2,2)), color="red") +
+  annotate("text", x = (B2[1]+C2[1])/2, y = (B2[2]+C2[2])/2,
+           label = paste0("a = ", round(a2,2), " (hypotenuse)"), color="darkgreen") +
+  ggtitle("Right Triangle: Illustration of Pythagorean Identity") +
+  theme_minimal()
+
+
+### -----------------------------------------------------------
+### Display both plots
+### -----------------------------------------------------------
+
+grid.arrange(plot_triangle, plot_right_triangle, ncol = 2)
+
+# Output numeric verification
+cat("Law of Cosines angle at A (degrees):", round(angle.A, 4), "\n")
+cat("Pythagorean Identity check (should be near 0):", round(pythag_check, 6), "\n")
+
+```

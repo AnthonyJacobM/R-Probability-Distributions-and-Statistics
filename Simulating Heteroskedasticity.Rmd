@@ -1,0 +1,61 @@
+---
+title: "Simulating Heteroskedasticity"
+author: "Anthony Morciglio"
+date: "11/16/2025"
+output: html_document
+---
+
+## Heteroskedasticity in Regression
+
+The following code demonstrates heteroskedastic data, which has variable error terms that can be ordered to increase with increased values of the random variable.
+Heteroskedasticly distributed datasets are difficult to evaluate using conventional statistic methods since interval estimation of population parameters are often distored and error in hypothesis testing is more likely.  Testing for variability in error terms is necessary to gauge the robustness of the statistical method.
+
+---
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+
+### Simulating Heteroskedasticity in Linear Regression
+
+set.seed(123)
+
+# Sample size
+n <- 300
+
+# Predictor variable
+x <- runif(n, 0, 10)
+
+# Heteroskedastic error term: variance increases with x
+sigma <- 0.3 * x        # Standard deviation grows with x
+eps <- rnorm(n, mean = 0, sd = sigma)
+
+# Response variable
+y <- 3 + 2*x + eps
+
+# Put in a data frame
+df <- data.frame(x, y, sigma)
+
+# Fit a standard linear regression
+model <- lm(y ~ x, data = df)
+
+# Plot the data and fitted line
+plot(df$x, df$y,
+     main = "Simulated Heteroskedastic Data",
+     xlab = "x", ylab = "y",
+     pch = 19, col = rgb(0, 0, 1, 0.5))
+
+abline(model, col = "red", lwd = 2)
+
+# Residual plot to visualize heteroskedasticity
+plot(model$fitted.values, model$residuals,
+     pch = 19, col = rgb(0, 0, 0, 0.5),
+     xlab = "Fitted Values", ylab = "Residuals",
+     main = "Residuals vs. Fitted (Heteroskedastic Pattern)")
+abline(h = 0, lwd = 2, col = "blue")
+
+# Add a curve showing how residual spread increases with x
+lines(sort(model$fitted.values),
+      2*sort(df$sigma), col = "red", lwd = 2, lty = 2)
+lines(sort(model$fitted.values),
+     -2*sort(df$sigma), col = "red", lwd = 2, lty = 2)
+
+```

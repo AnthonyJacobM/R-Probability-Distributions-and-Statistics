@@ -1,0 +1,105 @@
+---
+title: "Stable vs Unstable Recurrence Relations"
+author: "Anthony Morciglio"
+date: "11/13/2025"
+output: html_document
+---
+
+## Recurrence Relations
+
+In this post, we explore the **stability of recurrence relations** — equations that define a sequence recursively, where each term depends on the previous one.  
+A simple form of recurrence relation can be expressed as:
+
+\[
+x_{n+1} = a \, x_n
+\]
+
+where \( a \) is a constant parameter, and \( x_0 \) is the initial value of the sequence.
+
+The **stability** of this system depends on the magnitude of \( a \):
+
+- If \( |a| < 1 \), the sequence converges to 0 — the system is **stable**.
+- If \( |a| > 1 \), the sequence diverges — the system is **unstable**.
+- If \( |a| = 1 \), the sequence remains bounded or oscillates — the system is **marginally stable**.
+
+This behavior parallels the concept of **eigenvalues** in linear algebra and dynamical systems:
+- The parameter \( a \) acts as an eigenvalue determining the growth or decay rate of the state \( x_n \).
+
+## Objective
+
+The goal of this R script is to:
+1. Simulate recurrence relations with different values of \( a \).
+2. Visualize the **stable**, **unstable**, and **oscillatory** cases side by side.
+3. Demonstrate how the parameter \( a \) affects the long-term behavior of the sequence.
+
+
+```{r recurrence-stability, echo=TRUE, message=FALSE, warning=FALSE}
+# ------------------------------------------------------------
+# R Script: Stable vs. Unstable Recurrence Relations
+# ------------------------------------------------------------
+# This script demonstrates how varying the recurrence parameter 'a'
+# affects the stability of a first-order linear recurrence relation:
+#     x_{n+1} = a * x_n
+# Stability criterion:
+#   - |a| < 1  → stable (sequence converges)
+#   - |a| > 1  → unstable (sequence diverges)
+#   - |a| = 1  → marginal (oscillatory or constant amplitude)
+# ------------------------------------------------------------
+
+# Load libraries
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+# Define recurrence function
+generate_recurrence <- function(a, x0, n_steps) {
+  x <- numeric(n_steps)
+  x[1] <- x0
+  for (i in 2:n_steps) {
+    x[i] <- a * x[i - 1]
+  }
+  return(data.frame(step = 1:n_steps, value = x, a = a))
+}
+
+# Parameters
+x0 <- 1       # initial condition
+n_steps <- 30 # number of iterations
+a_values <- c(0.7, 1.2, -0.9) # stable, unstable, oscillatory
+
+# Generate data
+recurrence_data <- bind_rows(
+  lapply(a_values, function(a) generate_recurrence(a, x0, n_steps))
+)
+
+# Add label for stability type
+recurrence_data <- recurrence_data %>%
+  mutate(stability = case_when(
+    abs(a) < 1 ~ "Stable (|a| < 1)",
+    abs(a) == 1 ~ "Marginal (|a| = 1)",
+    TRUE ~ "Unstable (|a| > 1)"
+  ))
+
+# Plot results
+ggplot(recurrence_data, aes(x = step, y = value, color = stability)) +
+  geom_line(size = 1.2) +
+  geom_point(size = 2) +
+  facet_wrap(~ stability, scales = "free_y") +
+  scale_color_manual(values = c(
+    "Stable (|a| < 1)" = "blue",
+    "Marginal (|a| = 1)" = "black",
+    "Unstable (|a| > 1)" = "red"
+  )) +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Stability of Recurrence Relations",
+    subtitle = "x[n+1] = a * x[n] for various values of 'a'",
+    x = "Iteration (n)",
+    y = "x[n]",
+    color = "System Type"
+  ) +
+  theme(
+    plot.title = element_text(face = "bold"),
+    legend.position = "bottom"
+  )
+```
+

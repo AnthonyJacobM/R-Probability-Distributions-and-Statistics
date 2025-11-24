@@ -1,0 +1,59 @@
+---
+title: "Correlation and Covariance with Linear Regression"
+author: "Anthony Morciglio"
+date: "11/12/2025"
+output: html_document
+---
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+# =============================================
+# Correlation and Covariance Visualization
+# =============================================
+
+# Load necessary library
+library(ggplot2)
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Generate a dataset with a linear relationship
+x <- seq(1, 50, by = 1)
+y <- 2.5 * x + rnorm(50, mean = 0, sd = 10)  # Add some noise
+
+# Compute correlation and covariance
+cov_xy <- cov(x, y)
+cor_xy <- cor(x, y)
+
+# Display results
+cat("Covariance between x and y:", round(cov_xy, 2), "\n")
+cat("Correlation between x and y:", round(cor_xy, 2), "\n")
+
+# Create a data frame
+data <- data.frame(x = x, y = y)
+
+# Fit a linear model
+model <- lm(y ~ x, data = data)
+
+# Create the plot
+ggplot(data, aes(x = x, y = y)) +
+  geom_point(color = "blue", size = 2) +
+  geom_smooth(method = "lm", se = TRUE, color = "red", linetype = "solid") +
+  labs(
+    title = "Correlation and Covariance Illustrated with Linear Regression",
+    subtitle = paste("Covariance =", round(cov_xy, 2),
+                     "| Correlation =", round(cor_xy, 2)),
+    x = "Variable X",
+    y = "Variable Y"
+  ) +
+  theme_minimal(base_size = 14)
+```
+
+
+---
+
+### 🧩 **What the Output Shows**
+- The **console output** displays the numerical values for covariance and correlation.  
+- The **plot** visualizes how the data points align around the regression line.  
+- The **slope of the red line** represents the **direction and magnitude** of the linear relationship, consistent with the **sign of the correlation**.  
+
+Would you like me to extend this RMarkdown example to include a *nonlinear dataset* (to show how correlation behaves when the relationship isn’t linear)?

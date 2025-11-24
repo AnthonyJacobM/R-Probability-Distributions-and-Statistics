@@ -1,0 +1,66 @@
+---
+title: "Odds Ratio Multiple Categories"
+author: "Anthony Morciglio"
+date: "11/23/2025"
+output: html_document
+---
+
+## Solving for the Odds Ratio
+
+In this demonstration, we sample 6000 male and 6500 female patients and count the number of cases for multiple cancers including: Non-small cell lung cancer, Basal Cell Carcinoma, and Pancreatic Cancer.  We then calculate the Odds Ratio between Men and Women for each of the cancer groups and illustrate the results.
+
+```{r Odds-Ratio, echo=TRUE, message=FALSE, warning=FALSE}
+
+# Load libraries
+library(dplyr)
+library(ggplot2)
+
+# Data
+N_male   <- 6000
+N_female <- 6500
+
+df <- data.frame(
+  Cancer = c("Osteosarcoma",
+             "Glioblastoma",
+             "Invasive lobular carcinoma",
+             "Pancreatic cancer",
+             "Retinoblastoma",
+             "Basal cell carcinoma",
+             "Non-small cell lung cancer"),
+  Male_cases   = c(10, 30, 5, 90, 5, 140, 220),
+  Female_cases = c(8, 20, 200, 80, 4, 160, 180)
+)
+
+# Compute noncases
+df <- df %>%
+  mutate(
+    Male_noncases   = N_male - Male_cases,
+    Female_noncases = N_female - Female_cases
+  )
+
+# Compute odds ratio
+df <- df %>%
+  rowwise() %>%
+  mutate(
+    OR = (Male_cases * Female_noncases) / (Female_cases * Male_noncases)
+  ) %>%
+  ungroup()
+
+# Order by descending OR
+df <- df %>% arrange(desc(OR))
+
+# Plot horizontal bar chart
+ggplot(df, aes(x = OR, y = reorder(Cancer, OR))) +
+  geom_col(fill = "blue") +
+  scale_fill_gradientn(
+    colours = c("blue", "black", "red"),
+    name = "Odds Ratio"
+  ) +
+  labs(
+    title = "Odds Ratio (Male vs Female) by Cancer Type",
+    x = "Odds Ratio (log scale optional)",
+    y = "Cancer Type"
+  ) +
+  theme_minimal(base_size = 14)
+
+```

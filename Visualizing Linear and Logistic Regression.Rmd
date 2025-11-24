@@ -1,0 +1,70 @@
+---
+title: "Visualizing Linear and Logistic Regression"
+author: "Anthony Morciglio"
+date: "11/13/2025"
+output: html_document
+---
+
+## Summary
+
+In this section, we illustrate the fundamental difference between **Linear Regression** and **Logistic Regression** using a simulated dataset in R.  
+Both models will use the same independent variable — *hours studied* — but predict different outcomes:
+
+- **Linear Regression:** Predicts a continuous numeric response, such as an exam score.
+- **Logistic Regression:** Predicts a binary outcome, such as whether a student passes or fails the exam.
+
+The steps in the code below are as follows:
+
+1. **Generate synthetic data** — simulate 100 students’ study hours, exam scores, and pass/fail outcomes.
+2. **Fit two models:**
+   - Linear regression (`lm`) for exam score prediction.
+   - Logistic regression (`glm`) for pass/fail classification.
+3. **Plot the data and both fitted regression curves** using `ggplot2`.
+4. **Overlay the logistic curve (S-shaped)** to show how probabilities approach 0 or 1 as study hours increase, while the linear model extends beyond [0,1].
+5. **Label the plots** clearly to highlight differences between continuous and probabilistic modeling.
+
+---
+
+```{r linear_vs_logistic_regression, echo=TRUE, message=FALSE, warning=FALSE}
+# Load required library
+library(ggplot2)
+
+# 1. Simulate data
+set.seed(123)
+n <- 100
+hours <- runif(n, 0, 10)  # hours studied between 0 and 10
+
+# True underlying relationships
+true_score <- 40 + 6 * hours + rnorm(n, 0, 8)          # Linear (exam score)
+prob_pass <- 1 / (1 + exp(-( -5 + 1.0 * hours )))      # Logistic (pass/fail probability)
+pass <- rbinom(n, 1, prob_pass)                        # Binary outcomes
+
+# Combine data into a dataframe
+df <- data.frame(hours, true_score, pass)
+
+# 2. Fit Linear and Logistic regression models
+linear_model <- lm(true_score ~ hours, data = df)
+logistic_model <- glm(pass ~ hours, data = df, family = binomial)
+
+# 3. Generate predictions
+hours_seq <- seq(0, 10, length.out = 100)
+pred_linear <- predict(linear_model, newdata = data.frame(hours = hours_seq))
+pred_logit <- predict(logistic_model, newdata = data.frame(hours = hours_seq), type = "response")
+
+df$pred_linear = pred_linear;
+df$pred_logit = pred_logit;
+
+# 4. Plot the data and fitted models
+ggplot(df, aes(x = hours)) +
+  geom_point(aes(y = true_score), color = "blue", alpha = 0.6, size = 2) +
+  #geom_line(aes(y = pred_linear), color = "darkblue", size = 1.2, linetype = #"solid") +
+  geom_point(aes(y = pass * 100), color = "maroon", alpha = 0.6, size = 2) +
+  labs(
+    title = "Comparison of Linear and Logistic Regression",
+    subtitle = "Linear model predicts continuous scores; Logistic model predicts pass probability",
+    x = "Hours Studied",
+    y = "Probability (%)"
+  ) +
+  theme_minimal(base_size = 13) 
+  #annotate("text", x = 8, y = 90, label = "Linear Regression", color = "blue", #size = 4.5) 
+```

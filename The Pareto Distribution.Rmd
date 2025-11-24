@@ -1,0 +1,109 @@
+---
+title: "Illustrating the Pareto Distribution"
+author: "Anthony Morciglio"
+date: "11/17/2025"
+output: html_document
+---
+
+## Pareto Distribution: PDF, CDF, and 80/20 Illustration
+
+This document illustrates the Pareto distribution using simulation, along with plots of the PDF and CDF.  
+We consider the standard Pareto distribution parameterized by a minimum value \( x_m \) and shape parameter \( \alpha \).
+
+### Pareto PDF
+
+\[
+f(x) = \frac{\alpha x_m^\alpha}{x^{\alpha+1}}, \quad x \ge x_m
+\]
+
+### Pareto CDF
+
+\[
+F(x) = 1 - \left( \frac{x_m}{x} \right)^\alpha, \quad x \ge x_m
+\]
+
+The Pareto distribution is known for describing heavy-tailed phenomena and is frequently connected to the **80/20 rule**—the idea that a large proportion of outcomes is produced by a small portion of the population.
+
+---
+
+## R Code: Simulating, Visualizing, and Illustrating the Pareto Distribution
+
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+
+# Load libraries
+library(ggplot2)
+library(dplyr)
+
+# ----------------------------------------
+# Parameters
+# ----------------------------------------
+xm <- 1        # minimum value
+alpha <- 2.5   # shape parameter
+n <- 5000      # sample size
+
+# ----------------------------------------
+# Pareto PDF and CDF functions
+# ----------------------------------------
+dpareto <- function(x, xm, alpha) {
+  ifelse(x >= xm, (alpha * xm^alpha) / (x^(alpha + 1)), 0)
+}
+
+ppareto <- function(x, xm, alpha) {
+  ifelse(x >= xm, 1 - (xm / x)^alpha, 0)
+}
+
+# ----------------------------------------
+# Simulate Pareto data
+# Inverse transform sampling:
+# X = xm / (1 - U)^(1/alpha)
+# ----------------------------------------
+set.seed(123)
+u <- runif(n)
+x <- xm / (u)^(1 / alpha)
+df <- data.frame(x = x)
+
+# ----------------------------------------
+# PDF curve
+# ----------------------------------------
+x_vals <- seq(xm, quantile(x, 0.99), length.out = 400)
+pdf_vals <- dpareto(x_vals, xm, alpha)
+cdf_vals <- ppareto(x_vals, xm, alpha)
+
+pdf_df <- data.frame(x = x_vals, pdf = pdf_vals)
+cdf_df <- data.frame(x = x_vals, cdf = cdf_vals)
+
+# ----------------------------------------
+# Plot PDF
+# ----------------------------------------
+p_pdf <- ggplot(pdf_df, aes(x, pdf)) +
+  geom_line(size = 1.1, color = "blue") +
+  labs(title = "Pareto Distribution PDF",
+       x = "x",
+       y = "f(x)") +
+  theme_minimal()
+
+# ----------------------------------------
+# Plot CDF
+# ----------------------------------------
+p_cdf <- ggplot(cdf_df, aes(x, cdf)) +
+  geom_line(size = 1.1, color = "red") +
+  labs(title = "Pareto Distribution CDF",
+       x = "x",
+       y = "F(x)") +
+  theme_minimal()
+
+# ----------------------------------------
+# 80/20 Principle Approximation
+# Determine the value x* such that the top 20% of values hold most weight
+# ----------------------------------------
+threshold_80 <- quantile(df$x, 0.80)
+
+# ----------------------------------------
+# Output
+# ----------------------------------------
+p_pdf
+p_cdf
+
+cat("Threshold for top 20% largest values (80/20 rule illustration):", threshold_80, "\n")
+
+```

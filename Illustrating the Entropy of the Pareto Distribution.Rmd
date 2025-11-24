@@ -1,0 +1,84 @@
+---
+title: "Illustrating the Entropy of the Pareto Distribution"
+author: "Anthony Morciglio"
+date: "11/24/2025"
+output: html_document
+---
+
+## Synopsis of Differential Entropy
+
+This R Markdown document illustrates the **differential entropy** of the Pareto distribution,  
+defined for scale parameter \( x_m > 0 \) and shape parameter \( \alpha > 0 \) as:
+
+\[
+h(X) = \ln(x_m) - \ln(\alpha) + 1 + \frac{1}{\alpha}.
+\]
+
+The code below:
+
+1. Defines an R function computing Pareto entropy.  
+2. Evaluates entropy for a sequence of shape parameters \( \alpha \in [0.5, 6] \).
+3. Produces a plot of entropy versus \( \alpha \) for a fixed scale parameter \( x_m = 1 \).  
+4. Illustrates how entropy shifts under several possible scale values \( x_m \in \{1, 2, 5\} \).  
+5. Prints a small table of example entropy values.  
+
+All operations, figures, and printouts appear within the single code block below.
+
+```{r Entropy of Pareto, echo=TRUE, message=FALSE, warning=FALSE}
+
+# -----------------------------
+# 1. Entropy function for Pareto
+# -----------------------------
+pareto_entropy <- function(alpha, xm = 1) {
+  log(xm) - log(alpha) + 1 + 1/alpha
+}
+
+# ---------------------------------------
+# 2. Evaluate entropy across alpha values
+# ---------------------------------------
+alpha_vals <- seq(0.5, 6, length.out = 300)
+
+# Compute entropy for scale parameter xm = 1
+entropy_vals <- pareto_entropy(alpha_vals, xm = 1)
+
+# -----------------------------------------------------
+# 3. Plot entropy vs alpha for fixed scale xm = 1
+# -----------------------------------------------------
+plot(
+  alpha_vals, entropy_vals, type = "l", lwd = 2,
+  xlab = expression(alpha),
+  ylab = "Entropy h(X)",
+  main = "Pareto Entropy as a Function of Shape Parameter α (x[m] = 1)"
+)
+
+# --------------------------------------------------------------
+# 4. Compare effects of scale parameter: xm = 1, 2, and 5
+# --------------------------------------------------------------
+xm_list <- c(1, 2, 5)
+entropy_mat <- sapply(xm_list, function(xm) pareto_entropy(alpha_vals, xm))
+
+# Overlay curves for multiple scale parameters
+matplot(
+  alpha_vals, entropy_mat, type = "l", lwd = 2, lty = 1,
+  xlab = expression(alpha),
+  ylab = "Entropy h(X)",
+  main = "Effect of Scale Parameter x[m] on Pareto Entropy"
+)
+legend(
+  "topright", legend = paste("x[m] =", xm_list),
+  col = 1:length(xm_list), lty = 1, lwd = 2
+)
+
+# --------------------------------------------------------------
+# 5. Print sample entropy values for interpretation
+# --------------------------------------------------------------
+example_alphas <- c(0.5, 1, 2, 2.5, 5)
+example_tbl <- data.frame(
+  alpha = example_alphas,
+  entropy_xm1 = pareto_entropy(example_alphas, xm = 1),
+  entropy_xm2 = pareto_entropy(example_alphas, xm = 2),
+  entropy_xm5 = pareto_entropy(example_alphas, xm = 5)
+)
+
+example_tbl
+```

@@ -1,0 +1,94 @@
+---
+title: "Rössler System"
+author: "Anthony Morciglio"
+date: "11/19/2025"
+output: html_document
+---
+
+## Chaotic Trajectories of the Rössler System  
+This document simulates and visualizes the Rössler system using the classic chaotic
+parameter values:
+
+\[
+a = 0.2,\quad b = 0.2,\quad c = 5.7.
+\]
+
+The system of differential equations is:
+
+\[
+\begin{aligned}
+\dot{x} &= -y - z,\\
+\dot{y} &= x + a\,y,\\
+\dot{z} &= b + z(x - c).
+\end{aligned}
+\]
+
+We integrate the system using the **deSolve** package and visualize:
+
+1. Time trajectories of \(x(t)\), \(y(t)\), \(z(t)\).  
+2. Phase-plane plots: \(x\!-\!y\), \(x\!-\!z\), and \(y\!-\!z\).
+
+---
+
+```{r Retail-System, echo=TRUE, message=FALSE, warning=FALSE}
+# Load libraries
+library(deSolve)
+library(ggplot2)
+library(gridExtra)
+
+# -----------------------------
+# Define the Rossler System
+# -----------------------------
+rossler <- function(t, state, parameters) {
+  with(as.list(c(state, parameters)), {
+    dx <- -y - z
+    dy <- x + a * y
+    dz <- b + z * (x - c)
+    list(c(dx, dy, dz))
+  })
+}
+
+# Parameters (chaotic regime)
+parameters <- c(a = 0.2, b = 0.2, c = 5.7)
+
+# Initial conditions
+state <- c(x = 1, y = 0, z = 0)
+
+# Time span
+times <- seq(0, 500, by = 0.01)
+
+# Solve ODE
+out <- ode(y = state, times = times, func = rossler, parms = parameters)
+out <- as.data.frame(out)
+
+# -----------------------------
+# Time Trajectory Plot
+# -----------------------------
+p_time <- ggplot(out, aes(x = time)) +
+  geom_line(aes(y = x, color = "x(t)")) +
+  geom_line(aes(y = y, color = "y(t)")) +
+  geom_line(aes(y = z, color = "z(t)")) +
+  labs(title = "Time Trajectories of the Rössler System",
+       y = "Value", color = "Variable") +
+  theme_minimal()
+
+# -----------------------------
+# Phase Portraits
+# -----------------------------
+p_xy <- ggplot(out, aes(x = x, y = y)) +
+  geom_path(color = "blue") +
+  labs(title = "Phase Portrait: x vs y") +
+  theme_minimal()
+
+p_xz <- ggplot(out, aes(x = x, y = z)) +
+  geom_path(color = "red") +
+  labs(title = "Phase Portrait: x vs z") +
+  theme_minimal()
+
+p_yz <- ggplot(out, aes(x = y, y = z)) +
+  geom_path(color = "darkgreen") +
+  labs(title = "Phase Portrait: y vs z") +
+  theme_minimal()
+
+# Display phase portraits together
+grid.arrange(p_time, p_xy, p_xz, p_yz, ncol = 2)

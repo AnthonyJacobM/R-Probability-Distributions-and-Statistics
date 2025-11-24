@@ -1,0 +1,144 @@
+---
+title: "Measures of Central Tendency in Two-Way Contingency Tables"
+author: "Anthony Morciglio"
+date: "11/19/2025"
+output: html_document
+---
+
+## Pre-amble
+
+This R Markdown document simulates a two-way contingency table representing two categorical 
+variables, *X* and *Y*.  
+The goals are:
+
+1. **Simulate a contingency table** using random integer counts.  
+2. **Compute joint proportions**, **marginal distributions**, and **conditional proportions**.  
+3. **Calculate expected values (mean), variance, and mode** for the marginal distributions.  
+4. **Visualize the contingency table as a heatmap**,  
+   and display marginal distributions using bar plots.
+
+These steps illustrate how measures of central tendency can be computed using aggregated 
+frequency data rather than raw numerical observations.
+
+-----
+
+```{r CT-Two-Tables, echo=TRUE, message=FALSE, warning=FALSE}
+# Load libraries
+library(tidyverse)
+
+# -----------------------------------------------------------
+# 1. SIMULATE A TWO-WAY CONTINGENCY TABLE
+# -----------------------------------------------------------
+
+set.seed(123)
+
+# Categories for X and Y
+X_levels <- c("Low", "Medium", "High")
+Y_levels <- c("A", "B", "C", "D")
+
+# Generate random counts
+counts <- matrix(sample(5:40, length(X_levels)*length(Y_levels), replace=TRUE),
+                 nrow=length(X_levels), ncol=length(Y_levels),
+                 dimnames=list(X_levels, Y_levels))
+
+# Convert to data frame for tidy analysis
+df <- as.data.frame(as.table(counts))
+colnames(df) <- c("X", "Y", "Freq")
+
+df
+
+# -----------------------------------------------------------
+# 2. COMPUTE JOINT, MARGINAL, AND CONDITIONAL PROBABILITIES
+# -----------------------------------------------------------
+
+total_n <- sum(df$Freq)
+
+# Joint proportions P(X,Y)
+df <- df %>%
+  mutate(JointProp = Freq / total_n)
+
+# Marginal distributions
+marginal_X <- df %>%
+  group_by(X) %>%
+  summarise(MarginalX = sum(Freq) / total_n)
+
+marginal_Y <- df %>%
+  group_by(Y) %>%
+  summarise(MarginalY = sum(Freq) / total_n)
+
+# Conditional probabilities P(X | Y)
+conditional_X_given_Y <- df %>%
+  group_by(Y) %>%
+  mutate(Cond_X_given_Y = Freq / sum(Freq))
+
+# Conditional probabilities P(Y | X)
+conditional_Y_given_X <- df %>%
+  group_by(X) %>%
+  mutate(Cond_Y_given_X = Freq / sum(Freq))
+
+
+# -----------------------------------------------------------
+# 3. MEASURES OF CENTRAL TENDENCY FOR MARGINAL DISTRIBUTIONS
+# -----------------------------------------------------------
+
+# Assign numeric values to categories for illustration
+X_numeric <- c("Low"=1, "Medium"=2, "High"=3)
+Y_numeric <- c("A"=1, "B"=2, "C"=3, "D"=4)
+
+# Compute Expected Value (Mean)
+mean_X <- sum(marginal_X$MarginalX * X_numeric[marginal_X$X])
+mean_Y <- sum(marginal_Y$MarginalY * Y_numeric[marginal_Y$Y])
+
+# Compute Variance
+var_X <- sum(marginal_X$MarginalX * (X_numeric[marginal_X$X] - mean_X)^2)
+var_Y <- sum(marginal_Y$MarginalY * (Y_numeric[marginal_Y$Y] - mean_Y)^2)
+
+# Mode (category with largest marginal)
+mode_X <- marginal_X$X[which.max(marginal_X$MarginalX)]
+mode_Y <- marginal_Y$Y[which.max(marginal_Y$MarginalY)]
+
+list(
+  Mean_X = mean_X,
+  Variance_X = var_X,
+  Mode_X = mode_X,
+  Mean_Y = mean_Y,
+  Variance_Y = var_Y,
+  Mode_Y = mode_Y
+)
+
+
+# -----------------------------------------------------------
+# 4. VISUALIZATION SECTION
+# -----------------------------------------------------------
+
+# Heatmap of joint proportions
+plot_heatmap <- ggplot(df, aes(X, Y, fill = JointProp)) +
+  geom_tile(color="white") +
+  scale_fill_gradient(low="white", high="blue") +
+  labs(title="Heatmap of Joint Proportions",
+       fill="P(X,Y)") +
+  theme_minimal(base_size = 14)
+
+plot_heatmap
+
+# Marginal distributions for X and Y
+plot_marginal_X <- ggplot(marginal_X, aes(X, MarginalX)) +
+  geom_col(fill="blue") +
+  labs(title="Marginal Distribution of X",
+       y="P(X)") +
+  theme_minimal(base_size = 14)
+
+plot_marginal_Y <- ggplot(marginal_Y, aes(Y, MarginalY)) +
+  geom_col(fill="red") +
+  labs(title="Marginal Distribution of Y",
+       y="P(Y)") +
+  theme_minimal(base_size = 14)
+
+plot_marginal_X
+plot_marginal_Y
+
+# Display conditional probability examples
+head(conditional_X_given_Y)
+head(conditional_Y_given_X)
+
+```

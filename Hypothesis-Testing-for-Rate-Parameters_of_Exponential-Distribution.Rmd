@@ -1,0 +1,129 @@
+---
+title: "Hypothesis Test for Two Exponential Rate Parameters"
+author: "Anthony Morciglio"
+date: "11/21/2025"
+output: html_document
+---
+
+## Introduction
+
+This document demonstrates hypothesis testing for comparing two **rate parameters**  
+of exponential distributions. Suppose we observe two independent samples:
+
+- Sample A with rate parameter λ₁  
+- Sample B with rate parameter λ₂  
+
+We wish to test the hypothesis:
+
+\[
+H_0: \lambda_1 = \lambda_2 \quad\text{vs.}\quad H_1: \lambda_1 \neq \lambda_2.
+\]
+
+The rate parameter of an exponential distribution is estimated as:
+
+\[
+\hat{\lambda} = \frac{1}{\bar{X}}.
+\]
+
+A confidence interval for λ can be formed using the fact that:
+
+\[
+2n\bar{X}\hat{\lambda} \sim \chi^2_{2n}.
+\]
+
+Below, we simulate data, compute the MLEs, perform the test, and visualize  
+the parameter estimates with error bars.
+
+---
+
+## R Code
+
+```{r Retail-System, echo=TRUE, message=FALSE, warning=FALSE}
+set.seed(123)
+
+### 1. Simulate data --------------------------------------------------------
+
+n1 <- 50
+n2 <- 60
+
+lambda1_true <- 0.5      # true rate for sample A
+lambda2_true <- 0.8      # true rate for sample B
+
+sample1 <- rexp(n1, rate = lambda1_true)
+sample2 <- rexp(n2, rate = lambda2_true)
+
+### 2. Estimate rate parameters ---------------------------------------------
+
+lambda1_hat <- 1 / mean(sample1)
+lambda2_hat <- 1 / mean(sample2)
+
+lambda1_hat
+lambda2_hat
+
+### 3. Confidence intervals for rate parameters ------------------------------
+
+# Using Chi-square CI for exponential rate parameters
+# CI: ( 2n / χ²_{2n,1-α/2} ,  2n / χ²_{2n,α/2} ) * (1 / ΣX)
+
+alpha <- 0.05
+
+# Function for CI
+rate_CI <- function(sample) {
+  n <- length(sample)
+  sx <- sum(sample)
+  lower <- 2*n / qchisq(1 - alpha/2, df = 2*n)
+  upper <- 2*n / qchisq(alpha/2, df = 2*n)
+  c(lower / sx, upper / sx)
+}
+
+ci1 <- rate_CI(sample1)
+ci2 <- rate_CI(sample2)
+
+ci1
+ci2
+
+### 4. Hypothesis test for equality of rate parameters -----------------------
+
+# Under H0: λ1 = λ2 = λ, the pooled MLE is:
+lambda_pooled <- (n1 + n2) / (sum(sample1) + sum(sample2))
+
+# Likelihood ratio test statistic:
+LR_stat <- -2 * (
+  n1*log(lambda_pooled/lambda1_hat) +
+  n2*log(lambda_pooled/lambda2_hat)
+)
+
+# Asymptotic chi-square with df = 1
+p_value <- 1 - pchisq(LR_stat, df = 1)
+
+LR_stat
+p_value
+
+### 5. Create data frame for visualization ----------------------------------
+
+library(ggplot2)
+
+df <- data.frame(
+  Sample = c("Sample A", "Sample B"),
+  Estimate = c(lambda1_hat, lambda2_hat),
+  Lower = c(ci1[1], ci2[1]),
+  Upper = c(ci1[2], ci2[2])
+)
+
+### 6. Plot error bars -------------------------------------------------------
+
+ggplot(df, aes(x = Sample, y = Estimate)) +
+  geom_point(size = 4) +
+  geom_errorbar(aes(ymin = Lower, ymax = Upper), width = 0.15) +
+  labs(
+    title = "Rate Parameter Estimates for Two Exponential Samples",
+    y = "Estimated Rate (λ)",
+    x = ""
+  ) +
+  theme_minimal(base_size = 14)
+
+### 7. Report summary --------------------------------------------------------
+
+df
+p_value
+```

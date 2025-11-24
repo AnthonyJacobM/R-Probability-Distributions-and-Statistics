@@ -1,0 +1,88 @@
+---
+title: "Visualizing Population Proportion of Two Groups"
+author: "Anthony Morciglio"
+date: "11/20/2025"
+output: html_document
+---
+
+```{r, echo=TRUE, message=FALSE}
+
+# ------------------------------
+# 1. Simulate Two Proportion Groups
+# ------------------------------
+
+# Example manufacturing scenario:
+# Old machine: 28 defects out of 500
+# New machine: 12 defects out of 450
+
+n1 <- 500
+x1 <- 28
+p1 <- x1 / n1
+
+n2 <- 450
+x2 <- 12
+p2 <- x2 / n2
+
+# Standard errors for each group's proportion
+se1 <- sqrt(p1 * (1 - p1) / n1)
+se2 <- sqrt(p2 * (1 - p2) / n2)
+
+# Put into a data frame
+df <- data.frame(
+  Group = c("Manufactured Component 1", "Manufactured Component 2"),
+  Proportion = c(p1, p2),
+  SE = c(se1, se2),
+  Upper = c(p1 + 1.96 * se1,  p2 + 1.96 * se2),
+  Lower = c(p1 - 1.96 * se1,  p2 - 1.96 * se2)
+)
+
+df
+
+# ------------------------------
+# 2. Plot With Error Bars and Central Tendencies
+# ------------------------------
+
+library(ggplot2)
+
+# Compute overlap region between confidence intervals
+overlap_lower <- max(df$Lower)
+overlap_upper <- min(df$Upper)
+overlap_exists <- overlap_lower < overlap_upper
+
+# Create a shaded overlap data frame (if overlap exists)
+if (overlap_exists) {
+  overlap_df <- data.frame(
+    x = c(0.5, 2.5),
+    y_min = overlap_lower,
+    y_max = overlap_upper
+  )
+}
+
+# Plot
+ggplot(df, aes(x = Group, y = Proportion)) +
+  
+  # Shaded overlap region
+  { if (overlap_exists)
+      geom_rect(data = overlap_df,
+                aes(xmin = 0.5, xmax = 2.5,
+                    ymin = y_min, ymax = y_max),
+                inherit.aes = FALSE,
+                alpha = 0.2, fill = "lightblue")
+  } +
+  
+  # Error bars
+  geom_errorbar(aes(ymin = Lower, ymax = Upper), width = 0.15, size = 1) +
+  
+  # Point estimates
+  geom_point(size = 4, color = "blue") +
+  
+  # Labels and theme
+  labs(
+    title = "Proportion Comparison With Error Bars",
+    subtitle = "Showing Central Tendencies and Overlap Between Groups",
+    y = "Proportion Defective",
+    x = "Group"
+  ) +
+  theme_minimal(base_size = 16)
+
+```

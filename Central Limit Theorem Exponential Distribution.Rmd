@@ -1,7 +1,7 @@
 ---
 title: "Central Limit Theorem with the Exponential Distribution"
-author: Anthony Morciglio
-date: 10/02/2025
+author: "Anthony Morciglio"
+date: "10/02/2025"
 output: html_document
 ---
 
